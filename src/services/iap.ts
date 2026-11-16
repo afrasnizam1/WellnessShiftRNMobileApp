@@ -233,12 +233,20 @@ export const iapService = {
     });
   },
 
-  syncActiveSubscription: async (): Promise<ActiveSubscription | null> => {
+  syncActiveSubscription: async (): Promise<ActiveSubscription | null> =>
+    (await iapService.queryActiveSubscription()).active,
+
+  /**
+   * `ok: false` means the store could not be asked (offline, billing unavailable),
+   * so a cached tier may still be used. `ok: true` with `active: null` means the
+   * store answered and nothing is active — the subscription lapsed or never existed.
+   */
+  queryActiveSubscription: async (): Promise<{ ok: boolean; active: ActiveSubscription | null }> => {
     try {
       const purchases = await getAvailablePurchases({ onlyIncludeActiveItemsIOS: true });
-      return resolveHighestSubscription(purchases);
+      return { ok: true, active: resolveHighestSubscription(purchases) };
     } catch {
-      return null;
+      return { ok: false, active: null };
     }
   },
 
@@ -302,7 +310,7 @@ export function getEffectiveTier(storeTier: SubscriptionTier): SubscriptionTier 
     return appConfig.devSubscriptionTier;
   }
   // Active complimentary preview unlocks Pro features.
-  if (storeTier === 'free' && useAppStore.getState().trialActive) {
+  if (appConfig.enableComplimentaryPreview && storeTier === 'free' && useAppStore.getState().trialActive) {
     return 'pro';
   }
   return storeTier;

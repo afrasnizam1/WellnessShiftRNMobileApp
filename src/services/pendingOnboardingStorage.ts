@@ -5,9 +5,28 @@ import type { AppPurpose, ExperienceLevel, ReminderAnchor } from '../types/onboa
 
 const KEY = 'wellnessshift_pending_onboarding_v1';
 
+function currentAuthUid(): string | null {
+  try {
+    const auth = require('@react-native-firebase/auth').default;
+    return auth().currentUser?.uid ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Guest progress (no owner) or progress this account wrote itself. */
+export function pendingBelongsTo(pending: { ownerUid?: string | null }, uid: string): boolean {
+  return !pending.ownerUid || pending.ownerUid === uid;
+}
+
 export type AssessmentPath = 'mini' | 'full';
 
 export interface PendingOnboardingData {
+  /**
+   * Account that wrote this progress while signed in. Null for guest progress.
+   * Progress stamped with another account is never applied (shared devices).
+   */
+  ownerUid: string | null;
   breathWelcomeComplete: boolean;
   /** Guest saw the launch welcome video (IntroVideoScreen). */
   welcomeVideoComplete: boolean;
@@ -45,6 +64,7 @@ export interface PendingOnboardingData {
 }
 
 const EMPTY: PendingOnboardingData = {
+  ownerUid: null,
   breathWelcomeComplete: false,
   welcomeVideoComplete: false,
   appPurpose: null,
@@ -111,7 +131,10 @@ export const pendingOnboardingStorage = {
 
   save: async (patch: Partial<PendingOnboardingData>): Promise<PendingOnboardingData> => {
     const current = await pendingOnboardingStorage.get();
-    const next = { ...current, ...patch };
+    const signedInUid = currentAuthUid();
+    // A different account's leftovers never carry into this one.
+    const base = signedInUid && current.ownerUid && current.ownerUid !== signedInUid ? { ...EMPTY } : current;
+    const next = { ...base, ...patch, ownerUid: signedInUid ?? base.ownerUid ?? null };
     await AsyncStorage.setItem(KEY, JSON.stringify(next));
     return next;
   },

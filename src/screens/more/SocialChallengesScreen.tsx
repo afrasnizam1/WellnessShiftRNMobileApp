@@ -54,7 +54,15 @@ export default function SocialChallengesScreen() {
   const joinChallenge = async (challengeId: string) => {
     if (!user) return;
     try {
-      await socialService.joinChallenge(challengeId, user.uid, user.displayName);
+      const challenge = challenges.find((c) => c.id === challengeId);
+      // Service signature is (uid, displayName, challengeId, goal) — the old call passed
+      // these in the wrong order and wrote under challenges/{displayName}.
+      await socialService.joinChallenge(
+        user.uid,
+        user.displayName || 'Member',
+        challengeId,
+        challenge?.targetValue ?? challenge?.durationDays ?? 1,
+      );
       loadChallenges();
     } catch (e) {
       console.warn('Failed to join challenge:', e);

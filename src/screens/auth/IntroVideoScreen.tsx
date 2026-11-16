@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(148, 107, 250, 0.14)',
   },
   videoScrim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(10, 6, 18, 0.45)',
   },
   top: {

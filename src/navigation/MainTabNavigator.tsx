@@ -57,6 +57,7 @@ export function MainTabNavigator() {
 
   return (
     <View style={styles.root}>
+    {/* Hidden on Home (the plan is in the page) and on pushed screens. */}
     <CarePlanArrivalNotice />
     <Tab.Navigator
       backBehavior="history"

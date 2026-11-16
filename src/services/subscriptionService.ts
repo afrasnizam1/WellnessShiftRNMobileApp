@@ -65,10 +65,14 @@ export const subscriptionService = {
         onTierChange(storedTier);
       }
 
-      const active = await iapService.syncActiveSubscription();
+      const { ok, active } = await iapService.queryActiveSubscription();
       if (active) {
         await persistTier(active.tier, active.productId);
         onTierChange(active.tier);
+      } else if (ok && storedTier && storedTier !== 'free') {
+        // Store answered and nothing is active: the subscription lapsed.
+        await persistTier('free');
+        onTierChange('free');
       }
 
       cleanupListeners?.();
@@ -117,7 +121,7 @@ export const subscriptionService = {
       return;
     }
 
-    const active = await iapService.syncActiveSubscription();
+    const { ok, active } = await iapService.queryActiveSubscription();
     if (active) {
       await persistTier(active.tier, active.productId, uid);
       onTierChange(active.tier);
@@ -125,10 +129,20 @@ export const subscriptionService = {
     }
 
     const stored = await subscriptionStorage.getTier();
+    if (ok) {
+      // Store answered: nothing active means free, whatever this device cached.
+      if (stored && stored !== 'free') await persistTier('free', undefined, uid);
+      onTierChange('free');
+      return;
+    }
+    // Store unreachable (offline): keep the cached tier until it can be checked.
     if (stored) {
       onTierChange(stored);
     }
   },
+
+  /** Forget this device's cached tier (sign-out), so the next account starts clean. */
+  clearCachedTier: () => subscriptionStorage.clear(),
 
   loadStoreProducts: () => iapService.loadStoreProducts(),
 

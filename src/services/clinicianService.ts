@@ -353,6 +353,41 @@ async function syncPatientUserDoc(patientId: string, profile: Partial<UserProfil
   );
 }
 
+/** Direct Firestore lookup — only allowed by the rules for clinicians already linked. */
+async function searchPatientByEmailClient(email: string): Promise<UserProfile | null> {
+  const normalized = email.trim().toLowerCase();
+
+  const patientsSnap = await firestore()
+    .collection('patients')
+    .where('email', '==', normalized)
+    .limit(1)
+    .get();
+  if (!patientsSnap.empty) {
+    const doc = patientsSnap.docs[0];
+    const data = doc.data();
+    return {
+      uid: doc.id,
+      email: (data.email as string) ?? normalized,
+      displayName: (data.name as string) ?? 'Patient',
+      role: 'patient',
+      createdAt: new Date().toISOString(),
+      subscriptionTier: 'free',
+      onboardingComplete: Boolean(data.onboardingComplete),
+      quizComplete: Boolean(data.hasCompletedAssessment),
+    };
+  }
+
+  const snap = await firestore()
+    .collection('users')
+    .where('email', '==', normalized)
+    .limit(1)
+    .get();
+  if (snap.empty) return null;
+  const profile = snap.docs[0].data() as UserProfile;
+  if (profile.role === 'clinician') return null;
+  return { ...profile, uid: snap.docs[0].id };
+}
+
 export const clinicianService = {
   ensureClinicianDoc: async (clinicianId: string) => {
     const profile = await getProfile(clinicianId);
@@ -1330,38 +1365,20 @@ export const clinicianService = {
   // ─── Connection requests ────────────────────────────────────────────────────
 
   searchPatientByEmail: async (email: string): Promise<UserProfile | null> => {
-    const normalized = email.trim().toLowerCase();
-
-    const patientsSnap = await firestore()
-      .collection('patients')
-      .where('email', '==', normalized)
-      .limit(1)
-      .get();
-    if (!patientsSnap.empty) {
-      const doc = patientsSnap.docs[0];
-      const data = doc.data();
-      return {
-        uid: doc.id,
-        email: (data.email as string) ?? normalized,
-        displayName: (data.name as string) ?? 'Patient',
-        role: 'patient',
-        createdAt: new Date().toISOString(),
-        subscriptionTier: 'free',
-        onboardingComplete: Boolean(data.onboardingComplete),
-        quizComplete: Boolean(data.hasCompletedAssessment),
-      };
+    try {
+      return await searchPatientByEmailClient(email);
+    } catch (error: any) {
+      // Profiles are only readable by their owner and linked clinicians. Email lookup
+      // needs the sendClinicianConnectionRequest Cloud Function to be deployed.
+      if (String(error?.code ?? error?.message ?? '').includes('permission-denied')) {
+        throw new Error(
+          'Email search isn’t available right now. Share your invite code with the patient instead.',
+        );
+      }
+      throw error;
     }
-
-    const snap = await firestore()
-      .collection('users')
-      .where('email', '==', normalized)
-      .limit(1)
-      .get();
-    if (snap.empty) return null;
-    const profile = snap.docs[0].data() as UserProfile;
-    if (profile.role === 'clinician') return null;
-    return { ...profile, uid: snap.docs[0].id };
   },
+
 
   sendConnectionRequest: async (
     clinicianId: string,

@@ -6,6 +6,10 @@ import {
   sleepCategoryFromMetrics,
 } from './bodyMetricsService';
 import { foodLogService } from './foodLogService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const appliedDayKey = (uid: string) => `ws_lifestyle_blend_day_v1_${uid}`;
+const todayKey = () => new Date().toISOString().slice(0, 10);
 
 function blendToward(current: number, target: number, weight: number): number {
   const w = Math.max(0, Math.min(1, weight));
@@ -26,6 +30,11 @@ export async function applyLifestyleMetricsToWellnessScore(
 ): Promise<WellnessScore | null> {
   const latest = await wellnessService.getLatestScore(uid);
   if (!latest) return null;
+
+  // Blend at most once a day. Re-applying on every launch compounded the 20% pull
+  // each time, so the score moved just from opening the app and the history filled up.
+  const lastDay = await AsyncStorage.getItem(appliedDayKey(uid)).catch(() => null);
+  if (lastDay === todayKey()) return latest;
 
   const metrics = computeBodyDayMetrics(activity);
   const nutritionSummary = await foodLogService.getTodaySummary(uid);
@@ -80,6 +89,7 @@ export async function applyLifestyleMetricsToWellnessScore(
     (key) => categories[key] === latest.categories[key],
   );
   if (categoriesUnchanged && overall === latest.overall) {
+    await AsyncStorage.setItem(appliedDayKey(uid), todayKey()).catch(() => {});
     return latest;
   }
 
@@ -91,5 +101,6 @@ export async function applyLifestyleMetricsToWellnessScore(
   };
 
   await wellnessService.saveScore(uid, updated);
+  await AsyncStorage.setItem(appliedDayKey(uid), todayKey()).catch(() => {});
   return updated;
 }

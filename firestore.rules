@@ -51,17 +51,19 @@ service cloud.firestore {
 
     /** Patient may add/remove only themselves on a clinician's users doc. */
     function isPatientLinkedPatientsPatch(clinicianUserId) {
+      let before = resource.data.get('linkedPatients', []).toSet();
+      let after = request.resource.data.get('linkedPatients', []).toSet();
       return isSignedIn() &&
         request.auth.uid != clinicianUserId &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['linkedPatients']);
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['linkedPatients']) &&
+        after.difference(before).union(before.difference(after)).hasOnly([request.auth.uid]);
     }
 
-    // RN legacy user profiles — owner or linked clinician.
-    // TEMP: isClinicianAccount() allows email lookup until Blaze Cloud Functions deploy
-    // (sendClinicianConnectionRequest). Remove that clause after functions are live.
+    // RN legacy user profiles — owner or linked clinician only.
+    // Clinician email lookup goes through the sendClinicianConnectionRequest Cloud Function
+    // (Admin SDK); clinicians can no longer read or query profiles they are not linked to.
     match /users/{userId} {
-      allow read: if isOwner(userId) || isClinicianForPatient(userId) || isLinkedClinicianOf(userId)
-        || isClinicianAccount();
+      allow read: if isOwner(userId) || isClinicianForPatient(userId) || isLinkedClinicianOf(userId);
       allow create: if isOwner(userId);
       allow update: if isOwner(userId) || isPatientLinkedPatientsPatch(userId);
       allow delete: if isOwner(userId);
@@ -120,10 +122,9 @@ service cloud.firestore {
     }
 
     match /patients/{patientId} {
-      // TEMP: isClinicianAccount() for email connect until Cloud Function is deployed on Blaze.
       allow read: if isOwner(patientId) || isClinicianForPatient(patientId) ||
         (isSignedIn() && resource.data.linkedClinicianId == request.auth.uid) ||
-        isLinkedClinicianOf(patientId) || isClinicianAccount();
+        isLinkedClinicianOf(patientId);
       allow create: if isOwner(patientId);
       allow update: if isOwner(patientId) || isClinicianForPatient(patientId);
 
@@ -168,7 +169,11 @@ service cloud.firestore {
 
       match /linkedPatients/{patientId} {
         allow read: if isOwner(clinicianId) || isOwner(patientId);
-        allow create, update, delete: if isOwner(clinicianId) || isOwner(patientId);
+        // The patient links themselves; a clinician may only mirror a patient who has
+        // already linked to them (patients/{id}.linkedClinicianId). Either side may unlink.
+        allow create, update: if isOwner(patientId) ||
+          (isOwner(clinicianId) && isClinicianForPatient(patientId));
+        allow delete: if isOwner(clinicianId) || isOwner(patientId);
       }
 
       match /outgoingRequests/{requestId} {
@@ -183,11 +188,24 @@ service cloud.firestore {
         resource.data.patientId == request.auth.uid ||
         resource.data.clinicianId == request.auth.uid
       );
+      // Clinicians can only address a plan to a patient linked to them (or keep an
+      // unaddressed draft/template). Patients can create plans for themselves.
       allow create: if isSignedIn() && (
-        request.resource.data.clinicianId == request.auth.uid ||
+        (
+          request.resource.data.clinicianId == request.auth.uid && (
+            !('patientId' in request.resource.data) ||
+            request.resource.data.patientId == null ||
+            isClinicianForPatient(request.resource.data.patientId)
+          )
+        ) ||
         request.resource.data.patientId == request.auth.uid
       );
-      allow update: if isSignedIn() && resource.data.clinicianId == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.clinicianId == request.auth.uid && (
+        !('patientId' in request.resource.data) ||
+        request.resource.data.patientId == null ||
+        request.resource.data.patientId == resource.data.get('patientId', null) ||
+        isClinicianForPatient(request.resource.data.patientId)
+      );
     }
 
     match /messageThreads/{threadId} {
@@ -266,8 +284,11 @@ service cloud.firestore {
       allow create, update: if isOwner(userId);
     }
 
+    // The trial start is written once; it cannot be moved or extended from the client.
     match /userTrials/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update, delete: if false;
     }
 
     match /fcmTokens/{userId} {
@@ -277,12 +298,19 @@ service cloud.firestore {
 
     match /notifications/{notificationId} {
       allow read: if isSignedIn() && resource.data.patientId == request.auth.uid;
-      allow create: if isSignedIn();
+      // Only for yourself, or from a clinician to a patient linked to them.
+      allow create: if isSignedIn() && request.resource.data.patientId is string && (
+        request.resource.data.patientId == request.auth.uid ||
+        isClinicianForPatient(request.resource.data.patientId)
+      );
       allow update: if isSignedIn() && resource.data.patientId == request.auth.uid;
     }
 
     match /notificationQueue/{queueId} {
-      allow create: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.patientId is string && (
+        request.resource.data.patientId == request.auth.uid ||
+        isClinicianForPatient(request.resource.data.patientId)
+      );
       allow read, update: if false;
     }
 

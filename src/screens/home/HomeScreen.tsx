@@ -48,16 +48,16 @@ import HomePurposeLeadCard from '../../components/home/HomePurposeLeadCard';
 import HomeCycleCard from '../../components/home/HomeCycleCard';
 import ClinicianRecommendationsCard from '../../components/home/ClinicianRecommendationsCard';
 import { healthKitService } from '../../services/healthkit';
+import BodyHudCard from '../../components/home/bodyHud/BodyHudCard';
+import { HUD_CATEGORY_COUNT } from '../../components/home/bodyHud/bodyHudRings';
 import { applyLifestyleMetricsToWellnessScore } from '../../services/lifestyleScoreService';
 import { clinicianService } from '../../services/clinicianService';
 import { gamificationService } from '../../services/gamificationService';
 import { getRouteForModuleId } from '../../utils/fitnessModuleRouter';
 import { greetingName } from '../../utils/greetingName';
 import { getOrGeneratePlan } from '../../services/planGenerator';
-import { syncUnseenCarePlan } from '../../services/carePlanUnseen';
 import {
   wellnessService,
-  carePlanService,
   planService,
   wellnessScoreService,
   userService,
@@ -84,8 +84,6 @@ export default function HomeScreen() {
     setActivity,
     setDailyPlan,
     setWellnessScore,
-    setCarePlan,
-    setHasUnseenCarePlan,
     setUser,
     markTaskComplete,
     setGymVisit,
@@ -109,8 +107,6 @@ export default function HomeScreen() {
       setActivity: s.setActivity,
       setDailyPlan: s.setDailyPlan,
       setWellnessScore: s.setWellnessScore,
-      setCarePlan: s.setCarePlan,
-      setHasUnseenCarePlan: s.setHasUnseenCarePlan,
       hasUnseenCarePlan: s.hasUnseenCarePlan,
       setUser: s.setUser,
       markTaskComplete: s.markTaskComplete,
@@ -127,6 +123,19 @@ export default function HomeScreen() {
   );
 
   const [refreshing, setRefreshing] = useState(false);
+  const [hudRefreshKey, setHudRefreshKey] = useState(0);
+  // Tracks whether the Wellness Index card is in the scroll viewport, so the WebGL
+  // sphere stops rendering once it's scrolled past (state flips only on change).
+  const [hudOnScreen, setHudOnScreen] = useState(true);
+  const hudBox = useRef({ top: 0, height: 0 });
+  const hudViewport = useRef({ y: 0, height: 0 });
+  const updateHudOnScreen = useCallback(() => {
+    const { top, height } = hudBox.current;
+    const { y, height: vh } = hudViewport.current;
+    if (!height || !vh) return;
+    const visible = top < y + vh && top + height > y;
+    setHudOnScreen((prev) => (prev === visible ? prev : visible));
+  }, []);
   const [showDisclaimer, setShowDisclaimer] = useState(true);
   const [healthAvailable, setHealthAvailable] = useState(false);
   const [weeklySteps, setWeeklySteps] = useState(0);
@@ -325,18 +334,14 @@ export default function HomeScreen() {
       }
     })();
 
-    const unsubPlans = carePlanService.watchCarePlans(user.uid, (plans) => {
-      const latest = plans[0] ?? null;
-      setCarePlan(latest);
-      syncUnseenCarePlan(user.uid, latest, setHasUnseenCarePlan).catch(() => {});
-    });
+    // Care plans are watched once for the whole patient app (CarePlanArrivalNotice),
+    // which keeps the store's carePlan / unseen flag current for this screen too.
     const unsubRecs = clinicianService.watchFitnessHubRecommendations(
       user.uid,
       setClinicianRecommendations,
     );
     return () => {
       cancelled = true;
-      unsubPlans();
       unsubRecs();
     };
     // Intentionally uid-scoped — avoid re-init on array identity churn from setUser.
@@ -430,6 +435,7 @@ export default function HomeScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    setHudRefreshKey((k) => k + 1);
     await initHome();
     setRefreshing(false);
   }, [initHome]);
@@ -543,6 +549,15 @@ export default function HomeScreen() {
         }
         showsVerticalScrollIndicator={false}
         removeClippedSubviews
+        onLayout={(e) => {
+          hudViewport.current.height = e.nativeEvent.layout.height;
+          updateHudOnScreen();
+        }}
+        onScroll={(e) => {
+          hudViewport.current.y = e.nativeEvent.contentOffset.y;
+          updateHudOnScreen();
+        }}
+        scrollEventThrottle={100}
       >
         <TrialCountdownBanner />
 
@@ -591,6 +606,25 @@ export default function HomeScreen() {
 
         <DailyMotivationQuote />
 
+        <View
+          onLayout={(e) => {
+            hudBox.current = { top: e.nativeEvent.layout.y, height: e.nativeEvent.layout.height };
+            updateHudOnScreen();
+          }}
+        >
+          <BodyHudCard
+            uid={user?.uid}
+            wellnessScore={wellnessScore}
+            selectedCategory={selectedCategory}
+            onSelectCategory={toggleCategory}
+            streakDays={checkInStreak}
+            // The 3D sphere only renders while Home is focused AND the card is on screen.
+            focused={screenFocused && hudOnScreen}
+            refreshKey={hudRefreshKey}
+            csqScreen={CSQ_SCREEN}
+          />
+        </View>
+
         <AppCard style={styles.scoreCard} padded={false}>
           <View style={styles.scoreCardInner}>
           <View style={styles.scoreRingScaler}>
@@ -607,7 +641,7 @@ export default function HomeScreen() {
               scoreFeedback={scoreFeedback}
             />
             <View style={styles.categoryList}>
-              {WELLNESS_CATEGORIES.slice(0, 8).map((cat) => {
+              {WELLNESS_CATEGORIES.slice(0, HUD_CATEGORY_COUNT).map((cat) => {
                 const isSelected = selectedCategory === cat.key;
                 const catScore = wellnessScore?.categories?.[cat.key as WellnessCategoryKey] ?? 0;
                 return (
@@ -915,18 +949,18 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(52, 199, 89, 0.25)',
   },
   celebrationText: { fontSize: Typography.size.sm, color: Colors.success, fontWeight: '700', textAlign: 'center' },
-  greetingRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.sm },
+  greetingRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingVertical: 2 },
   avatarCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarLetter: { color: Colors.white, fontSize: Typography.size.lg, fontWeight: '800' },
+  avatarLetter: { color: Colors.white, fontSize: Typography.size.sm, fontWeight: '800' },
   greetingText: { flex: 1 },
-  greetingLine: { fontSize: Typography.size.sm, color: Colors.textSecondary, fontWeight: '500' },
-  greetingName: { fontSize: Typography.size.xl, fontWeight: '800', color: Colors.text, letterSpacing: -0.5 },
+  greetingLine: { fontSize: Typography.size.xs, color: Colors.textSecondary, fontWeight: '500' },
+  greetingName: { fontSize: Typography.size.md, fontWeight: '800', color: Colors.text, letterSpacing: -0.4 },
   datePill: {
     backgroundColor: Colors.surface,
     paddingHorizontal: Spacing.sm,

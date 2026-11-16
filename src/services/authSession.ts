@@ -50,6 +50,13 @@ export async function signOutCurrentUser(user?: UserProfile | null): Promise<voi
     }
   }
 
+  // Device-wide state belongs to the account that just left.
+  await Promise.all([
+    import('./pendingOnboardingStorage').then((m) => m.pendingOnboardingStorage.clear()),
+    import('./subscriptionService').then((m) => m.subscriptionService.clearCachedTier()),
+    import('./localNotifications').then((m) => m.localNotificationService.cancelAll()),
+  ]).catch(() => {});
+
   contentsquareService.clearUserIdentity();
   firebaseAnalytics.setUser(null).catch(() => {});
   firebaseAnalytics.logEvent('logout').catch(() => {});

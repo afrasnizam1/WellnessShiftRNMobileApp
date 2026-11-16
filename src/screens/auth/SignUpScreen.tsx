@@ -55,6 +55,8 @@ export default function SignUpScreen() {
 
   const [mode, setMode] = useState<'landing' | 'form'>(skipToForm ? 'form' : 'landing');
   const [showRolePicker, setShowRolePicker] = useState(false);
+  /** Set while the role picker is open for an Apple / Google sign-up. */
+  const pendingSocialRef = useRef<'apple' | 'google' | null>(null);
   const [role, setRole] = useState<UserRole>(initialRole);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -259,6 +261,12 @@ export default function SignUpScreen() {
   };
 
   const handleAppleSignUp = () => {
+    // Ask patient vs clinician first, like email sign-up.
+    pendingSocialRef.current = 'apple';
+    setShowRolePicker(true);
+  };
+
+  const runAppleSignUp = (selectedRole: UserRole) => {
     runAfterLegalChecks(async () => {
       setSocialLoading('apple');
       try {
@@ -267,9 +275,12 @@ export default function SignUpScreen() {
           consentAccepted: true,
           medicalDisclaimerAcknowledged: true,
           ageConfirmed: true,
+          role: selectedRole,
         });
         if (profile) {
-          profile = (await ensurePendingOnboardingApplied(profile.uid)) ?? profile;
+          if (profile.role === 'patient') {
+            profile = (await ensurePendingOnboardingApplied(profile.uid)) ?? profile;
+          }
           setUser(profile);
           firebaseAnalytics.logSignUp('apple').catch(() => {});
           await contentsquareService.onAuthSuccess(profile);
@@ -283,6 +294,12 @@ export default function SignUpScreen() {
   };
 
   const handleGoogleSignUp = () => {
+    // Ask patient vs clinician first, like email sign-up.
+    pendingSocialRef.current = 'google';
+    setShowRolePicker(true);
+  };
+
+  const runGoogleSignUp = (selectedRole: UserRole) => {
     runAfterLegalChecks(async () => {
       setSocialLoading('google');
       try {
@@ -291,9 +308,12 @@ export default function SignUpScreen() {
           consentAccepted: true,
           medicalDisclaimerAcknowledged: true,
           ageConfirmed: true,
+          role: selectedRole,
         });
         if (profile) {
-          profile = (await ensurePendingOnboardingApplied(profile.uid)) ?? profile;
+          if (profile.role === 'patient') {
+            profile = (await ensurePendingOnboardingApplied(profile.uid)) ?? profile;
+          }
           setUser(profile);
           firebaseAnalytics.logSignUp('google').catch(() => {});
           await contentsquareService.onAuthSuccess(profile);
@@ -310,6 +330,24 @@ export default function SignUpScreen() {
     setRole(selectedRole);
     setShowRolePicker(false);
     setMode('form');
+  };
+
+  const onRoleSelected = (selectedRole: UserRole) => {
+    const social = pendingSocialRef.current;
+    pendingSocialRef.current = null;
+    if (social === 'apple' || social === 'google') {
+      setRole(selectedRole);
+      setShowRolePicker(false);
+      if (social === 'apple') runAppleSignUp(selectedRole);
+      else runGoogleSignUp(selectedRole);
+      return;
+    }
+    startEmailSignUp(selectedRole);
+  };
+
+  const openEmailRolePicker = () => {
+    pendingSocialRef.current = null;
+    setShowRolePicker(true);
   };
 
   const demoSetters = {
@@ -345,7 +383,7 @@ export default function SignUpScreen() {
       <>
         <AuthLandingScreen
           primaryLabel="Sign Up with Email"
-          onPrimary={() => setShowRolePicker(true)}
+          onPrimary={openEmailRolePicker}
           onGoogle={googleConfigured ? handleGoogleSignUp : undefined}
           onApple={handleAppleSignUp}
           onBack={() => navigation.goBack()}
@@ -361,8 +399,11 @@ export default function SignUpScreen() {
         />
         <RolePickerModal
           visible={showRolePicker}
-          onClose={() => setShowRolePicker(false)}
-          onSelect={startEmailSignUp}
+          onClose={() => {
+            pendingSocialRef.current = null;
+            setShowRolePicker(false);
+          }}
+          onSelect={onRoleSelected}
         />
         <AppConsentModal
           visible={showConsentModal}

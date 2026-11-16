@@ -1,7 +1,7 @@
 import type { UserProfile, WellnessScore } from '../types';
 import type { AssessmentAnswerMap } from '../utils/wellnessAssessmentScoring';
 import type { MoodLevel } from '../types';
-import { pendingOnboardingStorage } from './pendingOnboardingStorage';
+import { pendingBelongsTo, pendingOnboardingStorage } from './pendingOnboardingStorage';
 import { onboardingStorage } from './onboardingStorage';
 import { userService, wellnessService } from './firebase';
 import { checkInService } from './checkInService';
@@ -21,6 +21,12 @@ export async function ensurePendingOnboardingApplied(uid: string): Promise<UserP
  */
 export async function applyPendingOnboardingToAccount(uid: string): Promise<boolean> {
   const pending = await pendingOnboardingStorage.get();
+
+  // Another account's progress on this device: drop it, never copy it across.
+  if (!pendingBelongsTo(pending, uid)) {
+    await pendingOnboardingStorage.clear();
+    return false;
+  }
 
   const hasQuiz = pending.quizComplete && !!pending.wellnessScore;
   const hasPurpose = !!(pending.appPurpose || pending.appPurposes?.length);
@@ -42,7 +48,8 @@ export async function applyPendingOnboardingToAccount(uid: string): Promise<bool
     ...(hasQuiz ? { quizComplete: true } : {}),
     ...(hasQuiz && pending.quizAnswers ? { quizAnswers: pending.quizAnswers } : {}),
     // Guest who already saw Results → enter the app after signup.
-    onboardingComplete: guestFinishedResults,
+    // Only ever set true here; never move an account back into onboarding.
+    ...(guestFinishedResults ? { onboardingComplete: true } : {}),
     appPurpose: pending.appPurpose ?? pending.appPurposes?.[0] ?? undefined,
     appPurposes: pending.appPurposes?.length
       ? pending.appPurposes
@@ -59,7 +66,11 @@ export async function applyPendingOnboardingToAccount(uid: string): Promise<bool
   });
 
   if (hasQuiz && pending.wellnessScore) {
-    await wellnessService.saveScore(uid, pending.wellnessScore);
+    // A signed-in quiz already saved its own score; re-saving it later would
+    // overwrite any newer check-in. Only guest scores are copied across.
+    if (!pending.ownerUid) {
+      await wellnessService.saveScore(uid, pending.wellnessScore);
+    }
     await onboardingStorage.markQuizComplete(uid);
     if (pending.quizAnswers) {
       await onboardingStorage.saveQuizAnswers(uid, pending.quizAnswers);

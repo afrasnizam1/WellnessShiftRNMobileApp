@@ -169,6 +169,9 @@ export function setupNotificationNavigation(onNavigate: (route: string) => void)
       const title = remoteMessage.notification?.title ?? 'Wellness Shift';
       const body = remoteMessage.notification?.body ?? '';
       const data = (remoteMessage.data ?? {}) as Record<string, string>;
+      // The app is open: the in-app care-plan notice / Home card already shows a new
+      // plan, so a system banner on top would be a second alert for the same thing.
+      if (data.type === 'care_plan') return;
       await localNotificationService.displayRemote(title, body, data);
     } catch (e) {
       console.warn('Foreground notification display failed:', e);

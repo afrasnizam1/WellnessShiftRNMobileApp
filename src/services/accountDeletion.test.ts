@@ -57,12 +57,17 @@ jest.mock('@react-native-firebase/firestore', () => {
   return { __esModule: true, default: firestore };
 });
 
+let mockLastSignIn = new Date().toISOString();
+
 jest.mock('@react-native-firebase/auth', () => {
   const auth = () => ({
     currentUser: {
       uid: 'user-1',
       delete: mockAuthDelete,
+      providerData: [{ providerId: 'password' }],
+      metadata: { lastSignInTime: mockLastSignIn },
     },
+    revokeToken: jest.fn(async () => undefined),
   });
   return { __esModule: true, default: auth };
 });
@@ -79,6 +84,7 @@ import { deleteCurrentUserAccount } from './accountDeletion';
 
 describe('deleteCurrentUserAccount', () => {
   beforeEach(() => {
+    mockLastSignIn = new Date().toISOString();
     callOrder.length = 0;
     mockFirestoreDelete.mockClear();
     mockAuthDelete.mockClear();
@@ -97,8 +103,13 @@ describe('deleteCurrentUserAccount', () => {
 
   it('throws a friendly error when Auth requires a recent login', async () => {
     mockAuthDelete.mockRejectedValueOnce({ code: 'auth/requires-recent-login' });
-    await expect(deleteCurrentUserAccount()).rejects.toThrow(
-      'For security, please sign out, sign back in, then try deleting your account again.',
-    );
+    await expect(deleteCurrentUserAccount()).rejects.toThrow('please sign out, sign back in');
+  });
+
+  it('deletes nothing when the last sign-in is too old', async () => {
+    mockLastSignIn = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    await expect(deleteCurrentUserAccount()).rejects.toThrow('Nothing has been deleted.');
+    expect(mockFirestoreDelete).not.toHaveBeenCalled();
+    expect(mockAuthDelete).not.toHaveBeenCalled();
   });
 });

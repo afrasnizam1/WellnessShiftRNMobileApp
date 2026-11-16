@@ -64,6 +64,7 @@ export const Colors = {
   successLight: 'rgba(52, 199, 89, 0.12)',
   warning: '#FF9500',
   warningLight: 'rgba(255, 149, 0, 0.12)',
+  warningDark: '#C77700',
   error: '#FF3B30',
   errorLight: 'rgba(255, 59, 48, 0.10)',
   info: '#007AFF',

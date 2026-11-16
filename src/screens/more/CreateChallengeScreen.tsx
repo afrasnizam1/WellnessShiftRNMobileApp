@@ -80,16 +80,16 @@ export default function CreateChallengeScreen() {
 
     setLoading(true);
     try {
-      await socialService.createChallenge({
-        title: formData.title.trim(),
-        description: formData.description.trim(),
-        category: formData.category,
-        duration: formData.duration,
-        targetValue: formData.targetValue,
-        targetUnit: formData.targetUnit,
-        createdBy: user.uid,
-        isPrivate: formData.isPrivate,
-      });
+      // The service takes positional arguments; passing one object created a
+      // challenge with an object as its owner id and no title.
+      await socialService.createChallenge(
+        user.uid,
+        formData.title.trim(),
+        formData.description.trim(),
+        formData.category,
+        formData.duration,
+        { targetValue: formData.targetValue, targetUnit: formData.targetUnit },
+      );
 
       Alert.alert(
         'Challenge Created!',

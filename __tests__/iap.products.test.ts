@@ -1,3 +1,19 @@
+jest.mock('react-native-iap', () => ({
+  __esModule: true,
+  initConnection: jest.fn(),
+  endConnection: jest.fn(),
+  fetchProducts: jest.fn(),
+  getAvailablePurchases: jest.fn(async () => []),
+  finishTransaction: jest.fn(),
+  requestPurchase: jest.fn(),
+  purchaseUpdatedListener: jest.fn(() => ({ remove: jest.fn() })),
+  purchaseErrorListener: jest.fn(() => ({ remove: jest.fn() })),
+  ErrorCode: {},
+}));
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
+
 import { ALL_PRODUCT_IDS, getTierFromProductId, resolveHighestSubscription } from '../src/services/iap';
 import type { Purchase } from 'react-native-iap';
 

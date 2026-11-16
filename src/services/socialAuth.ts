@@ -7,7 +7,13 @@
 import auth from '@react-native-firebase/auth';
 import { appConfig } from '../config/appConfig';
 import { userService } from './firebase';
-import type { UserProfile } from '../types';
+import type { UserProfile, UserRole } from '../types';
+
+/** True for an account Firebase created in the last two minutes (first social sign-in). */
+function isJustCreated(fbUser: { metadata?: { creationTime?: string } }): boolean {
+  const created = Date.parse(fbUser.metadata?.creationTime ?? '');
+  return Number.isFinite(created) && Date.now() - created < 2 * 60 * 1000;
+}
 
 // ─── Apple Sign In ────────────────────────────────────────────────────────────
 
@@ -51,6 +57,8 @@ export async function resolveCurrentUserProfile(options?: {
   consentAccepted?: boolean;
   medicalDisclaimerAcknowledged?: boolean;
   ageConfirmed?: boolean;
+  /** Role chosen on the sign-up screen. Only applied to a brand-new account. */
+  role?: UserRole;
 }): Promise<UserProfile | null> {
   if (!appConfig.isFirebaseConfigured) return null;
 
@@ -64,14 +72,20 @@ export async function resolveCurrentUserProfile(options?: {
     ageConfirmed: options?.ageConfirmed ?? false,
   };
 
+  const role: UserRole = options?.role ?? 'patient';
   if (!profile) {
     await userService.createProfile(fbUser.uid, {
       displayName: fbUser.displayName || 'User',
       email: fbUser.email || '',
-      role: 'patient',
+      role,
       ...consentFields,
     });
     profile = await userService.getProfile(fbUser.uid);
+  } else if (role === 'clinician' && profile.role === 'patient' && isJustCreated(fbUser)) {
+    // The app's auth listener can create a default patient profile a moment before
+    // this runs. A brand-new account that chose "clinician" must still be a clinician.
+    await userService.updateProfile(fbUser.uid, { role: 'clinician', ...consentFields });
+    profile = (await userService.getProfile(fbUser.uid)) ?? { ...profile, role: 'clinician' };
   } else if (options?.consentAccepted) {
     await userService.updateProfile(fbUser.uid, consentFields);
     profile = { ...profile, ...consentFields };
