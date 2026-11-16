@@ -14,6 +14,10 @@ import HealthTopicScreen from '../../screens/fitness/HealthTopicScreen';
 import VitaminsLearningScreen from '../../screens/fitness/VitaminsLearningScreen';
 import NutritionBasicsLearningScreen from '../../screens/fitness/NutritionBasicsLearningScreen';
 import LearningGuideDetailScreen from '../../screens/fitness/LearningGuideDetailScreen';
+import LearningGuidesScreen from '../../screens/fitness/LearningGuidesScreen';
+import LungHealthScreen from '../../screens/fitness/LungHealthScreen';
+import TargetedTreatmentScreen from '../../screens/fitness/TargetedTreatmentScreen';
+import MultipleMyelomaScreen from '../../screens/fitness/MultipleMyelomaScreen';
 import GuidedProgramScreen from '../../screens/fitness/GuidedProgramScreen';
 import MealPlannerScreen from '../../screens/fitness/MealPlannerScreen';
 import HighProteinMealsScreen from '../../screens/fitness/HighProteinMealsScreen';
@@ -47,6 +51,10 @@ export default function FitnessStackNavigator() {
       <Stack.Screen name={Screen.vitaminsLearning} component={VitaminsLearningScreen} />
       <Stack.Screen name={Screen.nutritionBasics} component={NutritionBasicsLearningScreen} />
       <Stack.Screen name={Screen.learningGuide} component={LearningGuideDetailScreen} />
+      <Stack.Screen name={Screen.learningGuides} component={LearningGuidesScreen} />
+      <Stack.Screen name={Screen.lungHealth} component={LungHealthScreen} />
+      <Stack.Screen name={Screen.targetedTreatment} component={TargetedTreatmentScreen} />
+      <Stack.Screen name={Screen.multipleMyeloma} component={MultipleMyelomaScreen} />
       <Stack.Screen name={Screen.guidedProgram} component={GuidedProgramScreen} />
       <Stack.Screen name={Screen.mealPlanner} component={MealPlannerScreen} />
       <Stack.Screen name={Screen.highProteinMeals} component={HighProteinMealsScreen} />

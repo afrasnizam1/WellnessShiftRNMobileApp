@@ -5,7 +5,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius, Shadow, WELLNESS_CATEGORIES } from '../../theme';
+import { Colors, Typography, Spacing, Radius, Shadow, WELLNESS_CATEGORIES, tabBarScrollPadding } from '../../theme';
 import { useAppStore } from '../../store';
 import { canAccessFeature } from '../../services/iap';
 import { buildWellnessReportSnapshot } from '../../services/wellnessReportAssembler';
@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
   backBtn: { width: 40 },
   backText: { fontSize: 32, color: Colors.primary, lineHeight: 38 },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: Typography.size.base, fontWeight: '700', color: Colors.text },
-  content: { padding: Spacing.base, gap: Spacing.md },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   previewCard: {
     backgroundColor: Colors.white, borderRadius: Radius.xl,
     padding: Spacing.xl, ...Shadow.md, gap: Spacing.md,

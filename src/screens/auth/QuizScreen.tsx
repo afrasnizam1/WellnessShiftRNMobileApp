@@ -4,7 +4,7 @@ import {
   View, Text, StyleSheet, ScrollView, Alert, ActivityIndicator,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { Colors, Typography, Spacing, Radius, WELLNESS_CATEGORIES } from '../../theme';
 import { useAppStore } from '../../store';
 import { wellnessService, userService } from '../../services/firebase';
@@ -16,25 +16,111 @@ import {
   getAssessmentQuestions,
   type AssessmentQuestion,
 } from '../../data/wellnessAssessmentQuestions';
-import { computeWellnessScoreFromAnswers } from '../../utils/wellnessAssessmentScoring';
-import { pendingOnboardingStorage } from '../../services/pendingOnboardingStorage';
 import {
+  computeWellnessScoreFromAnswers,
+  mergeAssessmentAnswers,
+  type AssessmentAnswerMap,
+} from '../../utils/wellnessAssessmentScoring';
+import { computeBiologicalAge } from '../../utils/biologicalAge';
+import { pendingOnboardingStorage } from '../../services/pendingOnboardingStorage';
+import { Screen } from '../../navigation/screenNames';
+import {
+  goBackOrTo,
   goToBuildingWellnessPlan,
   refreshPreAuthRouteFromPending,
   resumePreAuthOnboardingFromPending,
 } from '../../services/onboardingNavigation';
+import type { RootStackParamList, WellnessScore } from '../../types';
 
 const ADVANCE_DELAY_MS = 280;
 
+function formatOverall(score: number): string {
+  return Number.isInteger(score) ? String(score) : score.toFixed(1);
+}
+
+function formatAge(age: number): string {
+  return Number.isInteger(age) ? String(age) : age.toFixed(1);
+}
+
+function weakestDroppedCategory(
+  previous: WellnessScore,
+  next: WellnessScore,
+): string | null {
+  let worstKey: string | null = null;
+  let worstDelta = 0;
+  (Object.keys(next.categories) as Array<keyof WellnessScore['categories']>).forEach((key) => {
+    const delta = (next.categories[key] ?? 0) - (previous.categories[key] ?? next.categories[key] ?? 0);
+    if (delta < worstDelta) {
+      worstDelta = delta;
+      worstKey = key;
+    }
+  });
+  if (!worstKey || worstDelta > -0.3) return null;
+  return WELLNESS_CATEGORIES.find((c) => c.key === worstKey)?.label ?? null;
+}
+
+function deeperResultAlert(
+  previous: WellnessScore,
+  next: WellnessScore,
+  dateOfBirth?: string,
+  heightCm?: number,
+  weightKg?: number,
+): { title: string; message: string } {
+  const from = formatOverall(previous.overall);
+  const to = formatOverall(next.overall);
+  const delta = Math.round((next.overall - previous.overall) * 10) / 10;
+
+  let title: string;
+  let message: string;
+  if (delta >= 0.1) {
+    title = 'Great, your score improved';
+    message = `Your wellness score went from ${from} to ${to}. The extra 10 questions lifted it. Keep that going.`;
+  } else if (delta <= -0.1) {
+    title = 'Your score went down';
+    const weak = weakestDroppedCategory(previous, next);
+    message = `Your wellness score went from ${from} to ${to}. That's not what we wanted, but these extra answers are a more accurate picture.${
+      weak ? ` ${weak} pulled it down the most.` : ''
+    } Work those weaker areas and you can bring it back up.`;
+  } else {
+    title = 'Your score held steady';
+    message = `Your wellness score is still ${to} (was ${from}). The extra 10 questions confirmed your first result. Small habit wins will move it.`;
+  }
+
+  const prevBio = dateOfBirth
+    ? computeBiologicalAge({ dateOfBirth, wellnessScore: previous, heightCm, weightKg })
+    : null;
+  const nextBio = dateOfBirth
+    ? computeBiologicalAge({ dateOfBirth, wellnessScore: next, heightCm, weightKg })
+    : null;
+  if (prevBio && nextBio) {
+    const ageFrom = formatAge(prevBio.biologicalAge);
+    const ageTo = formatAge(nextBio.biologicalAge);
+    if (nextBio.biologicalAge < prevBio.biologicalAge) {
+      message += `\n\nBiological age improved from ${ageFrom} to ${ageTo}. That's a win.`;
+    } else if (nextBio.biologicalAge > prevBio.biologicalAge) {
+      message += `\n\nBiological age went from ${ageFrom} to ${ageTo}.`;
+    }
+  }
+
+  return { title, message };
+}
+
 export default function QuizScreen() {
   const navigation = useNavigation<any>();
+  const route = useRoute<RouteProp<RootStackParamList, typeof Screen.wellnessQuiz>>();
   const { user, setWellnessScore, setLastQuizAnswers, setUser, hasSeenIntro } = useAppStore();
-  const [questions, setQuestions] = useState<AssessmentQuestion[]>(getAssessmentQuestions('onboarding'));
+  const isDeeper =
+    route.params?.mode === 'deeper' ||
+    (!!user?.onboardingComplete && route.params?.mode !== 'onboarding');
+  const [questions, setQuestions] = useState<AssessmentQuestion[]>(
+    getAssessmentQuestions(isDeeper ? 'deeper' : 'onboarding'),
+  );
   const [questionsReady, setQuestionsReady] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
   const [advancing, setAdvancing] = useState(false);
+  const previousAnswersRef = useRef<AssessmentAnswerMap>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -45,19 +131,30 @@ export default function QuizScreen() {
         if (cancelled || resumed === 'handled') return;
       }
 
-      // Onboarding = 10 questions (1 per category). Retake from Home = deeper 10.
-      const questionSet = user?.onboardingComplete ? 'deeper' : 'onboarding';
-      const pending = await pendingOnboardingStorage.get();
-      if (cancelled) return;
-      if (pending.assessmentPath !== 'full') {
-        await pendingOnboardingStorage.saveAssessmentPath('full');
+      const questionSet = isDeeper ? 'deeper' : 'onboarding';
+      if (!isDeeper) {
+        const pending = await pendingOnboardingStorage.get();
         if (cancelled) return;
+        if (pending.assessmentPath !== 'full') {
+          await pendingOnboardingStorage.saveAssessmentPath('full');
+          if (cancelled) return;
+        }
+      } else {
+        const pending = await pendingOnboardingStorage.get();
+        const stored = user ? await onboardingStorage.getQuizAnswers(user.uid) : null;
+        const inMemory = useAppStore.getState().lastQuizAnswers;
+        previousAnswersRef.current =
+          inMemory ?? stored ?? user?.quizAnswers ?? pending.quizAnswers ?? {};
+        if (!inMemory && Object.keys(previousAnswersRef.current).length > 0) {
+          setLastQuizAnswers(previousAnswersRef.current);
+        }
       }
+      if (cancelled) return;
       setQuestions(getAssessmentQuestions(questionSet));
       setQuestionsReady(true);
     })();
     return () => { cancelled = true; };
-  }, [navigation, user, hasSeenIntro]);
+  }, [navigation, user, hasSeenIntro, isDeeper, setLastQuizAnswers]);
 
   const TOTAL = questions.length;
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -79,6 +176,31 @@ export default function QuizScreen() {
   const selectedScore = q ? answers[q.id] : undefined;
   const inputLocked = saving || advancing;
 
+  const persistResults = async (
+    score: ReturnType<typeof computeWellnessScoreFromAnswers>,
+    merged: AssessmentAnswerMap,
+  ) => {
+    if (!user) return;
+    const profilePatch = {
+      quizComplete: true,
+      quizAnswers: merged,
+      ...(isDeeper ? { deeperCheckInComplete: true } : {}),
+    };
+    await onboardingStorage.saveQuizAnswers(user.uid, merged);
+    await onboardingStorage.markQuizComplete(user.uid);
+    if (isDeeper) {
+      await onboardingStorage.markDeeperCheckInComplete(user.uid);
+    }
+    setUser({ ...user, ...profilePatch });
+    try {
+      await ensureAuthReadyForUid(user.uid);
+      await wellnessService.saveScore(user.uid, score);
+      await userService.updateProfile(user.uid, profilePatch);
+    } catch (error) {
+      console.warn('[QuizScreen] persistResults remote failed:', error);
+    }
+  };
+
   const finishQuiz = async (finalAnswers: Record<string, number>) => {
     if (savingRef.current) return;
     savingRef.current = true;
@@ -90,19 +212,52 @@ export default function QuizScreen() {
       advanceTimerRef.current = null;
     }
 
-    const score = computeWellnessScoreFromAnswers(finalAnswers);
+    const merged = isDeeper
+      ? mergeAssessmentAnswers(previousAnswersRef.current, finalAnswers)
+      : finalAnswers;
+    const score = computeWellnessScoreFromAnswers(merged);
+    const previousScore = isDeeper
+      ? (Object.keys(previousAnswersRef.current).length > 0
+          ? computeWellnessScoreFromAnswers(previousAnswersRef.current)
+          : useAppStore.getState().wellnessScore)
+      : null;
     setWellnessScore(score);
-    setLastQuizAnswers(finalAnswers);
+    setLastQuizAnswers(merged);
+
+    const showDeeperScorePopup = () => {
+      const comparison = previousScore
+        ? deeperResultAlert(
+            previousScore,
+            score,
+            user?.dateOfBirth,
+            user?.heightCm,
+            user?.weightKg,
+          )
+        : {
+            title: 'Score updated',
+            message: `Your wellness score is now ${formatOverall(score.overall)} from all 20 questions.`,
+          };
+      Alert.alert(comparison.title, comparison.message, [
+        {
+          text: 'OK',
+          onPress: () => goBackOrTo(navigation, Screen.patientApp),
+        },
+      ]);
+    };
 
     try {
-      await pendingOnboardingStorage.saveQuiz(score, finalAnswers);
+      if (isDeeper) {
+        await persistResults(score, merged);
+        savingRef.current = false;
+        setSaving(false);
+        showDeeperScorePopup();
+        return;
+      }
+
+      await pendingOnboardingStorage.saveQuiz(score, merged);
 
       if (user) {
-        await ensureAuthReadyForUid(user.uid);
-        await wellnessService.saveScore(user.uid, score);
-        await userService.updateProfile(user.uid, { quizComplete: true });
-        await onboardingStorage.markQuizComplete(user.uid);
-        setUser({ ...user, quizComplete: true });
+        await persistResults(score, merged);
       }
 
       // Guest and signed-in: 3s building interstitial, then Results.
@@ -113,6 +268,13 @@ export default function QuizScreen() {
       setSaving(false);
     } catch (error) {
       console.warn('[QuizScreen] finishQuiz failed:', error);
+      savingRef.current = false;
+      setSaving(false);
+      if (isDeeper) {
+        persistResults(score, merged).catch(() => {});
+        showDeeperScorePopup();
+        return;
+      }
       Alert.alert(
         'Could not save your results',
         'Your answers were scored locally. You can continue.',
@@ -120,21 +282,14 @@ export default function QuizScreen() {
           {
             text: 'Continue',
             onPress: async () => {
-              pendingOnboardingStorage.saveQuiz(score, finalAnswers).catch(() => {});
-              if (user) {
-                setUser({ ...user, quizComplete: true });
-                wellnessService.saveScore(user.uid, score).catch(() => {});
-                userService.updateProfile(user.uid, { quizComplete: true }).catch(() => {});
-                onboardingStorage.markQuizComplete(user.uid).catch(() => {});
-              }
+              pendingOnboardingStorage.saveQuiz(score, merged).catch(() => {});
+              persistResults(score, merged).catch(() => {});
               refreshPreAuthRouteFromPending(hasSeenIntro).catch(() => {});
               goToBuildingWellnessPlan(navigation);
             },
           },
         ],
       );
-      savingRef.current = false;
-      setSaving(false);
     }
   };
 
@@ -159,6 +314,16 @@ export default function QuizScreen() {
     finishQuiz(newAnswers);
   };
 
+  const leaveDeeper = () => {
+    if (inputLocked) return;
+    if (advanceTimerRef.current) {
+      clearTimeout(advanceTimerRef.current);
+      advanceTimerRef.current = null;
+      setAdvancing(false);
+    }
+    goBackOrTo(navigation, Screen.patientApp);
+  };
+
   const handleBack = () => {
     if (inputLocked) return;
     if (advanceTimerRef.current) {
@@ -166,8 +331,16 @@ export default function QuizScreen() {
       advanceTimerRef.current = null;
       setAdvancing(false);
     }
-    if (currentIndex > 0) setCurrentIndex((i) => Math.max(i - 1, 0));
-    else navigation.goBack();
+    if (currentIndex > 0) {
+      setCurrentIndex((i) => Math.max(i - 1, 0));
+      return;
+    }
+    if (isDeeper) {
+      leaveDeeper();
+      return;
+    }
+    // The quiz is often the first screen in the stack, so goBack() has nowhere to go.
+    goBackOrTo(navigation, Screen.purposeSelection);
   };
 
   if (!questionsReady || !q) {
@@ -182,7 +355,9 @@ export default function QuizScreen() {
     return (
       <AppScreen style={styles.loading}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>Saving your results…</Text>
+        <Text style={styles.loadingText}>
+          {isDeeper ? 'Updating your score…' : 'Saving your results…'}
+        </Text>
       </AppScreen>
     );
   }
@@ -208,10 +383,32 @@ export default function QuizScreen() {
           <Text style={styles.progressDivider}>/</Text>
           <Text style={styles.progressTotal}>{TOTAL}</Text>
         </View>
-        <View style={{ width: 40 }} />
+        {isDeeper ? (
+          <AnimatedPressable
+            onPress={leaveDeeper}
+            style={styles.skipBtn}
+            disabled={inputLocked}
+            accessibilityRole="button"
+            accessibilityLabel="Skip extra questions"
+          >
+            <Text style={styles.skipText}>Skip</Text>
+          </AnimatedPressable>
+        ) : (
+          <View style={{ width: 40 }} />
+        )}
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {isDeeper && safeIndex === 0 ? (
+          <View style={styles.deeperBanner}>
+            <Text style={styles.deeperBannerTitle}>More accurate score & biological age</Text>
+            <Text style={styles.deeperBannerBody}>
+              These 10 extra questions are added to your first 10 — they don’t replace them.
+              Finish this set if you want a more accurate wellness score and biological age.
+            </Text>
+          </View>
+        ) : null}
+
         <View style={[styles.catPill, { backgroundColor: (cat?.color ?? Colors.primary) + '18' }]}>
           <Text style={styles.catPillIcon}>{cat?.icon}</Text>
           <Text style={[styles.catPillText, { color: cat?.color }]}>{cat?.label}</Text>
@@ -287,6 +484,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: Colors.surface,
   },
+  skipBtn: {
+    minWidth: 40,
+    height: 40,
+    paddingHorizontal: 8,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  skipText: {
+    fontSize: Typography.size.sm,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+  },
   progressBadge: {
     flexDirection: 'row',
     alignItems: 'baseline',
@@ -302,6 +512,23 @@ const styles = StyleSheet.create({
   progressDivider: { fontSize: Typography.size.sm, color: Colors.textTertiary },
   progressTotal: { fontSize: Typography.size.sm, color: Colors.textSecondary, fontWeight: '600' },
   content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: Spacing['3xl'] },
+  deeperBanner: {
+    backgroundColor: Colors.primaryLight,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    gap: 6,
+  },
+  deeperBannerTitle: {
+    fontSize: Typography.size.sm,
+    fontWeight: '800',
+    color: Colors.primary,
+  },
+  deeperBannerBody: {
+    fontSize: Typography.size.sm,
+    color: Colors.text,
+    lineHeight: 20,
+    fontWeight: '500',
+  },
   catPill: {
     alignSelf: 'flex-start',
     flexDirection: 'row',

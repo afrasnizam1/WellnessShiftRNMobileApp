@@ -6,7 +6,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius, Gradients } from '../../theme';
+import { Colors, Typography, Spacing, Radius, Gradients, tabBarScrollPadding } from '../../theme';
 import { AppCard, ScreenHeader, ListRow } from '../../components/ui';
 import { useAppStore } from '../../store';
 import { userService } from '../../services/firebase';
@@ -247,7 +247,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   header: { paddingHorizontal: Spacing.base },
-  content: { padding: Spacing.base, gap: Spacing.md },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   avatarSection: { alignItems: 'center', paddingVertical: Spacing.lg, gap: Spacing.sm },
   avatar: {
     width: 88,

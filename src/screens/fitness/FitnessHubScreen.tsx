@@ -9,12 +9,12 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius, fitnessModuleIonIcon } from '../../theme';
+import { Colors, Typography, Spacing, Radius, fitnessModuleIonIcon, tabBarScrollPadding } from '../../theme';
 import { AppCard, SectionHeader, ListRow, SegmentedControl } from '../../components/ui';
 import FeaturedGuideCard from '../../components/fitness/FeaturedGuideCard';
 import StepsPinnedPreviewCard from '../../components/fitness/StepsPinnedPreviewCard';
 import FuturisticModuleGlyph, { hasFuturisticGlyph } from '../../components/fitness/FuturisticModuleGlyph';
-import { LEARNING_GUIDES } from '../../data/learningGuides';
+import { filterLearningGuides, type LearningGuide } from '../../data/learningGuides';
 import { useAppStore } from '../../store';
 import {
   FITNESS_MODULES,
@@ -39,6 +39,9 @@ const MODULE_COUNT = FITNESS_MODULES.length;
 const LEARNING_ROUTES: Record<string, string> = {
   vitamins: Screen.vitaminsLearning,
   'nutrition-basics': Screen.nutritionBasics,
+  'lung-health': Screen.lungHealth,
+  'targeted-treatment': Screen.targetedTreatment,
+  'multiple-myeloma': Screen.multipleMyeloma,
 };
 
 function learningRoute(guideId: string): { screen: string; params?: object } {
@@ -51,7 +54,7 @@ const LearningGuideItem = memo(function LearningGuideItem({
   guide,
   onOpen,
 }: {
-  guide: (typeof LEARNING_GUIDES)[number];
+  guide: LearningGuide;
   onOpen: (id: string) => void;
 }) {
   const onPress = useCallback(() => onOpen(guide.id), [guide.id, onOpen]);
@@ -154,6 +157,7 @@ export default function FitnessHubScreen() {
 
   const [activeTab, setActiveTab] = useState<Tab>('recommended');
   const [searchQuery, setSearchQuery] = useState('');
+  const [learningQuery, setLearningQuery] = useState('');
   const [clinicianRec, setClinicianRec] = useState<FitnessHubRecommendation | null>(null);
   const [showWomensHealth, setShowWomensHealth] = useState(false);
   /** Mount Explore list once, then keep it alive so tab switches are instant. */
@@ -199,6 +203,21 @@ export default function FitnessHubScreen() {
       .filter((s) => s.data.length > 0);
   }, [searchQuery]);
 
+  const visibleLearningGuides = useMemo(
+    () => filterLearningGuides(learningQuery),
+    [learningQuery],
+  );
+
+  const onLearningSearchChange = useCallback((text: string) => {
+    learningProgressRef.current?.setProgress(0);
+    setLearningQuery(text);
+  }, []);
+
+  const clearLearningSearch = useCallback(() => {
+    learningProgressRef.current?.setProgress(0);
+    setLearningQuery('');
+  }, []);
+
   const navigateToModule = useCallback((module: FitnessModule) => {
     navigateToFitnessModule(navigation, module, subscriptionTier);
   }, [navigation, subscriptionTier]);
@@ -225,10 +244,15 @@ export default function FitnessHubScreen() {
     navigation.navigate(Screen.tabAnalytics, { screen: Screen.progressTracking });
   }, [navigation]);
 
-  const switchToExplore = useCallback(() => {
-    setExploreMounted(true);
-    setActiveTab('all');
-  }, []);
+  const openAllLearningGuides = useCallback(() => {
+    // Push onto the Fitness stack (sibling of Fitness Hub). Prefer push so a
+    // stale Fast Refresh navigator still fails loudly vs silently no-op.
+    if (typeof navigation.push === 'function') {
+      navigation.push(Screen.learningGuides);
+    } else {
+      navigation.navigate(Screen.learningGuides);
+    }
+  }, [navigation]);
 
   const onTabChange = useCallback((v: string) => {
     const next: Tab = v === 'Recommended' ? 'recommended' : 'all';
@@ -361,26 +385,54 @@ export default function FitnessHubScreen() {
               title="Learning"
               icon="book-outline"
               actionLabel="See all"
-              onAction={switchToExplore}
+              onAction={openAllLearningGuides}
             />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.featuredRow}
-              onScroll={onLearningScroll}
-              scrollEventThrottle={32}
-            >
-              {LEARNING_GUIDES.map((g) => (
-                <LearningGuideItem
-                  key={g.id}
-                  guide={g}
-                  onOpen={openLearningGuide}
-                />
-              ))}
-            </ScrollView>
-            <View style={styles.learningProgressWrap}>
-              <ScrollProgressBar ref={learningProgressRef} />
+            <View style={styles.searchWrap}>
+              <Ionicons name="search" size={18} color={Colors.textTertiary} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search learning..."
+                placeholderTextColor={Colors.textTertiary}
+                value={learningQuery}
+                onChangeText={onLearningSearchChange}
+                returnKeyType="search"
+                autoCorrect={false}
+                autoCapitalize="none"
+                clearButtonMode="never"
+              />
+              {learningQuery.length > 0 ? (
+                <Pressable onPress={clearLearningSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="close-circle" size={18} color={Colors.textTertiary} />
+                </Pressable>
+              ) : null}
             </View>
+            {visibleLearningGuides.length === 0 ? (
+              <View style={styles.learningEmpty}>
+                <Text style={styles.emptyTitle}>No guides found</Text>
+                <Text style={styles.emptyText}>Try a different search term</Text>
+              </View>
+            ) : (
+              <>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.featuredRow}
+                  onScroll={onLearningScroll}
+                  scrollEventThrottle={32}
+                >
+                  {visibleLearningGuides.map((g) => (
+                    <LearningGuideItem
+                      key={g.id}
+                      guide={g}
+                      onOpen={openLearningGuide}
+                    />
+                  ))}
+                </ScrollView>
+                <View style={styles.learningProgressWrap}>
+                  <ScrollProgressBar ref={learningProgressRef} />
+                </View>
+              </>
+            )}
 
             <SectionHeader title="Activity & progress" icon="pulse-outline" />
             <AppCard padded={false}>
@@ -444,7 +496,7 @@ const styles = StyleSheet.create({
   pane: { flex: 1 },
   paneHidden: { display: 'none' },
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: Spacing.base, paddingBottom: Spacing.base },
+  scrollContent: { paddingHorizontal: Spacing.base, paddingBottom: tabBarScrollPadding },
 
   header: {
     paddingHorizontal: Spacing.base,
@@ -495,7 +547,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
 
-  featuredRow: { paddingBottom: Spacing.xs, paddingRight: Spacing.base },
+  featuredRow: { paddingBottom: Spacing.xs, paddingRight: Spacing.base, paddingTop: Spacing.sm },
+  learningEmpty: {
+    paddingVertical: Spacing.lg,
+    gap: 4,
+  },
 
   cardDivider: {
     height: StyleSheet.hairlineWidth,

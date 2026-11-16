@@ -15,7 +15,7 @@ import type { RootStackParamList } from '../../types';
 
 type Props = NativeStackScreenProps<RootStackParamList, typeof Screen.welcome>;
 
-const LOGO_SIZE = 140;
+const LOGO_SIZE = 200;
 
 export default function SplashScreen({ navigation }: Props) {
   const { setUser, setWellnessScore, setAuthLoading, setSubscriptionTier, setHasSeenIntro, setClinicianProfileReady } = useAppStore();

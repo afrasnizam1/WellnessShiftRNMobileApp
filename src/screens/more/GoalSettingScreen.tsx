@@ -6,7 +6,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Screen } from '../../navigation/screenNames';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { AppCard, ListRow, ScreenHeader } from '../../components/ui';
 import { useAppStore } from '../../store';
 import { goalService, type Goal, type GoalType, type GoalCategory } from '../../services/goalService';
@@ -184,11 +184,11 @@ export default function GoalSettingScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.base, gap: Spacing.md },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   empty: { alignItems: 'center', padding: Spacing.xl, gap: Spacing.sm },
   emptyTitle: { fontSize: Typography.size.base, fontWeight: '700', color: Colors.text },
   emptySub: { fontSize: Typography.size.sm, color: Colors.textSecondary, textAlign: 'center' },
-  list: { gap: Spacing.md },
+  list: { gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   goalCard: { gap: Spacing.sm },
   goalRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   categoryDot: { width: 10, height: 10, borderRadius: 5 },

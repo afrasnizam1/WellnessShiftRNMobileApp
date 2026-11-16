@@ -22,7 +22,7 @@
   <!-- ── Associated Domains (universal links) ──────────────────────────── -->
   <key>com.apple.developer.associated-domains</key>
   <array>
-    <string>applinks:wellnessshift.co.uk</string>
+    <string>applinks:wellnesshift.co.uk</string>
   </array>
 
   <!-- ── Firebase App Check (App Attest) ──────────────────────────────── -->

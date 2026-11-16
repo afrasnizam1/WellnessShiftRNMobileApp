@@ -15,11 +15,9 @@ import {
   REGISTRATION_BODIES,
 } from '../../data/legalContent';
 import AppScreen from '../../components/common/AppScreen';
+import { PROFESSIONAL_SPECIALTIES } from '../../types/onboardingPrefs';
 
-const SPECIALTIES = [
-  'General Practice', 'Dermatology', 'Cardiology', 'Physiotherapy', 'Psychiatry',
-  'Nutrition', 'Sports Medicine', 'Other',
-];
+const SPECIALTIES = PROFESSIONAL_SPECIALTIES;
 
 const SCOPE_OPTIONS = ['Selective', 'Guided'] as const;
 
@@ -95,7 +93,7 @@ export default function ClinicianOnboardingScreen() {
               <IconBadgeHeader icon="medkit-outline" />
               <Text style={styles.title}>Set up your clinician profile</Text>
               <Text style={styles.subtitle}>
-                This helps patients recognise you when they connect. You can update this later in Settings.
+                For doctors, clinicians, neurosurgeons, physiotherapists, physical therapists, and other registered practitioners. Patients connect with the invite code you share.
               </Text>
 
               <Text style={styles.label}>Practice / clinic name</Text>

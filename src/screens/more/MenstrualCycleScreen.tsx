@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Alert } from 
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { format } from 'date-fns';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { AppCard, ScreenHeader, BrandButton, FilterChip } from '../../components/ui';
 import AppScreen from '../../components/common/AppScreen';
 import { useAppStore } from '../../store';
@@ -215,7 +215,7 @@ export default function MenstrualCycleScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.base, gap: Spacing.sm, paddingBottom: 40 },
+  content: { padding: Spacing.base, gap: Spacing.sm, paddingBottom: tabBarScrollPadding},
   phaseCard: { borderLeftWidth: 4, gap: Spacing.sm },
   phaseDay: { fontSize: Typography.size.lg, fontWeight: '700', color: Colors.text },
   phaseTip: { fontSize: Typography.size.sm, color: Colors.textSecondary, lineHeight: 22 },

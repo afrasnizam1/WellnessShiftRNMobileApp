@@ -6,7 +6,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
 import { format, parseISO } from 'date-fns';
-import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
+import { Colors, Typography, Spacing, Radius, Shadow, tabBarScrollPadding } from '../../theme';
 import { useAppStore } from '../../store';
 import { programService } from '../../services/programService';
 import { getProgramDayLesson, getTodayProgramDay } from '../../data/programDayContent';
@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
   backBtn: { width: 40 },
   backText: { fontSize: 32, color: Colors.primary, lineHeight: 38 },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: Typography.size.base, fontWeight: '700', color: Colors.text },
-  content: { padding: Spacing.base, gap: Spacing.md },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   hero: { borderRadius: Radius.xl, padding: Spacing.lg, alignItems: 'center', gap: Spacing.xs },
   heroIcon: { fontSize: 48 },
   heroCat: { fontSize: Typography.size.sm, color: Colors.textSecondary },

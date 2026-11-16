@@ -5,7 +5,7 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { format } from 'date-fns';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { ScreenHeader, SegmentedControl } from '../../components/ui';
 import StepsMiniBars from '../../components/fitness/StepsMiniBars';
 import DailyStepsRow from '../../components/fitness/DailyStepsRow';
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   navHeader: { paddingHorizontal: Spacing.base },
   content: {
     paddingHorizontal: Spacing.base,
-    paddingBottom: Spacing['3xl'],
+    paddingBottom: tabBarScrollPadding,
     gap: Spacing.md,
   },
   pinnedHeader: {

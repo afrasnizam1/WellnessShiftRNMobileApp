@@ -1,8 +1,44 @@
 diff --git a/node_modules/react-native-health/RCTAppleHealthKit/RCTAppleHealthKit.m b/node_modules/react-native-health/RCTAppleHealthKit/RCTAppleHealthKit.m
-index e8ddce1..a8da53e 100644
+index e8ddce1..6bc2650 100644
 --- a/node_modules/react-native-health/RCTAppleHealthKit/RCTAppleHealthKit.m
 +++ b/node_modules/react-native-health/RCTAppleHealthKit/RCTAppleHealthKit.m
-@@ -840,8 +840,6 @@ -(void)startObserving {
+@@ -656,18 +656,25 @@ - (void)initializeHealthKit:(NSDictionary *)input callback:(RCTResponseSenderBlo
+             return;
+         }
+ 
+-        [self.healthStore requestAuthorizationToShareTypes:writeDataTypes readTypes:readDataTypes completion:^(BOOL success, NSError *error) {
+-            if (!success) {
+-                NSString *errMsg = [NSString stringWithFormat:@"Error with HealthKit authorization: %@", error];
+-                 NSLog(@"%@", errMsg);
+-                callback(@[RCTMakeError(errMsg, nil, nil)]);
+-                return;
+-            } else {
+-                dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
++        // Apple requires requestAuthorization on the main thread or the sheet
++        // fails and the completion reports an error.
++        dispatch_async(dispatch_get_main_queue(), ^{
++            [self.healthStore requestAuthorizationToShareTypes:writeDataTypes readTypes:readDataTypes completion:^(BOOL success, NSError *error) {
++                // HealthKit invokes this off the main thread. The new-architecture
++                // bridge drops that callback unless it is delivered on main.
++                dispatch_async(dispatch_get_main_queue(), ^{
++                    if (!success) {
++                        NSString *errMsg = error != nil
++                            ? [NSString stringWithFormat:@"Error with HealthKit authorization: %@", error]
++                            : @"Apple Health did not grant access.";
++                        NSLog(@"%@", errMsg);
++                        callback(@[RCTMakeError(errMsg, nil, nil)]);
++                        return;
++                    }
+                     callback(@[[NSNull null], @true]);
+                 });
+-            }
+-        }];
++            }];
++        });
+     } else {
+         callback(@[RCTMakeError(@"HealthKit data is not available", nil, nil)]);
+     }
+@@ -840,8 +847,6 @@ -(void)startObserving {
  
  - (void)emitEventInternal:(NSNotification *)notification {
    if (self.hasListeners) {

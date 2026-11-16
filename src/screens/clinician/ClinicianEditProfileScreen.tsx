@@ -7,11 +7,9 @@ import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { useAppStore } from '../../store';
 import { clinicianService } from '../../services/clinicianService';
 import AppScreen from '../../components/common/AppScreen';
+import { PROFESSIONAL_SPECIALTIES } from '../../types/onboardingPrefs';
 
-const SPECIALTIES = [
-  'General Practice', 'Cardiology', 'Physiotherapy', 'Psychiatry',
-  'Nutrition', 'Sports Medicine', 'Other',
-];
+const SPECIALTIES = PROFESSIONAL_SPECIALTIES;
 
 export default function ClinicianEditProfileScreen() {
   const navigation = useNavigation<any>();

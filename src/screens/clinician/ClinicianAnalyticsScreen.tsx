@@ -10,12 +10,15 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { ClinicianLayout, ClinicianTheme } from '../../theme/clinicianTheme';
+import { useNavigation } from '@react-navigation/native';
 import { useAppStore } from '../../store';
 import { clinicianService } from '../../services/clinicianService';
 import AppScreen from '../../components/common/AppScreen';
 import ClinicianHeroHeader from '../../components/clinician/ClinicianHeroHeader';
+import { Screen } from '../../navigation/screenNames';
 
 export default function ClinicianAnalyticsScreen() {
+  const navigation = useNavigation<any>();
   const user = useAppStore((s) => s.user);
   const [patients, setPatients] = useState<Awaited<ReturnType<typeof clinicianService.fetchLinkedPatients>>>([]);
   const [loading, setLoading] = useState(true);
@@ -67,6 +70,7 @@ export default function ClinicianAnalyticsScreen() {
       <ClinicianHeroHeader
         title="Analytics"
         subtitle={patients.length ? `Insights across ${patients.length} patients` : 'Link patients to unlock insights'}
+        onBack={() => navigation.navigate(Screen.clinicianTabs, { screen: Screen.clinicianDashboard })}
       />
 
       <AppScreen mesh={false} backgroundColor={Colors.background} style={styles.body} edges={[]}>

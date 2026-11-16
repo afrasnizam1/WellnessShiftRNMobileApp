@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius, Shadow, WELLNESS_CATEGORIES } from '../../theme';
+import { Colors, Typography, Spacing, Radius, Shadow, WELLNESS_CATEGORIES, tabBarScrollPadding } from '../../theme';
 import { useAppStore } from '../../store';
 import { planService, wellnessScoreService } from '../../services/firebase';
 import { navigateToLinkedModule } from '../../utils/fitnessNavigation';
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
   backBtn: { width: 40 },
   backText: { fontSize: 32, color: Colors.primary, lineHeight: 38 },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: Typography.size.base, fontWeight: '700', color: Colors.text },
-  content: { padding: Spacing.base, gap: Spacing.md },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   hero: { borderRadius: Radius.xl, padding: Spacing.xl, alignItems: 'center', gap: Spacing.md },
   heroIcon: { fontSize: 56 },
   heroTitle: { fontSize: Typography.size.xl, fontWeight: '700', color: Colors.text, textAlign: 'center' },

@@ -1,10 +1,9 @@
 // src/screens/auth/SignInScreen.tsx
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Screen } from '../../navigation/screenNames';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  KeyboardAvoidingView, ScrollView,
-  Platform, Alert,
+  ScrollView, TextInput, Alert,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -17,6 +16,7 @@ import { firebaseAuth, userService } from '../../services/firebase';
 import { ensureAuthReadyForUid } from '../../services/firebaseReady';
 import { signInWithApple, signInWithGoogle, resolveCurrentUserProfile } from '../../services/socialAuth';
 import { contentsquareService } from '../../services/contentsquareService';
+import { firebaseAnalytics } from '../../services/firebaseAnalytics';
 import { useAppStore } from '../../store';
 import { SensitiveCSQMask } from '../../components/common/SensitiveCSQMask';
 import {
@@ -75,6 +75,12 @@ export default function SignInScreen() {
   const [socialLoading, setSocialLoading] = useState<'apple' | 'google' | null>(null);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const passwordRef = useRef<TextInput>(null);
+
+  const revealPassword = () => {
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 400);
+  };
 
   const clearFormError = () => {
     if (formError) setFormError(null);
@@ -131,6 +137,7 @@ export default function SignInScreen() {
         setClinicianProfileReady(false);
       }
       setUser(profile);
+      firebaseAnalytics.logLogin('email').catch(() => {});
       contentsquareService.onAuthSuccess(profile).catch((csqErr) => {
         console.warn('[SignIn] Contentsquare onAuthSuccess failed:', csqErr);
       });
@@ -149,7 +156,10 @@ export default function SignInScreen() {
     try {
       await signInWithApple();
       const profile = await resolveCurrentUserProfile();
-      if (profile) await contentsquareService.onAuthSuccess(profile);
+      if (profile) {
+        firebaseAnalytics.logLogin('apple').catch(() => {});
+        await contentsquareService.onAuthSuccess(profile);
+      }
     } catch (err: any) {
       if (err.code !== '1001') Alert.alert('Apple Sign In Failed', 'Please try again.');
     } finally {
@@ -162,7 +172,10 @@ export default function SignInScreen() {
     try {
       await signInWithGoogle();
       const profile = await resolveCurrentUserProfile();
-      if (profile) await contentsquareService.onAuthSuccess(profile);
+      if (profile) {
+        firebaseAnalytics.logLogin('google').catch(() => {});
+        await contentsquareService.onAuthSuccess(profile);
+      }
     } catch (err: any) {
       if (err.code !== 'SIGN_IN_CANCELLED') Alert.alert('Google Sign In Failed', 'Please try again.');
     } finally {
@@ -209,6 +222,19 @@ export default function SignInScreen() {
       ]
     : undefined;
 
+  const leaveAuth = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    const parent = navigation.getParent();
+    if (parent?.canGoBack()) {
+      parent.goBack();
+      return;
+    }
+    navigation.getParent()?.navigate(Screen.introVideo);
+  };
+
   const signInHeroSlides = [
     { icon: 'body' as const, title: 'Wellness', subtitle: 'Your journey to better health starts here' },
     { icon: 'heart' as const, title: 'Health', subtitle: 'Track and improve your wellbeing' },
@@ -226,7 +252,7 @@ export default function SignInScreen() {
         onPrimary={() => setMode('email')}
         onGoogle={googleConfigured ? handleGoogleSignIn : undefined}
         onApple={handleAppleSignIn}
-        onBack={() => navigation.goBack()}
+        onBack={leaveAuth}
         devSkipActions={devSkipActions}
         switchPrompt="Don't have an account?"
         switchAction="Sign Up"
@@ -247,19 +273,17 @@ export default function SignInScreen() {
           ? 'Sign in to your clinician portal'
           : 'Sign in to continue your wellness journey'
       }
-      onBack={() => (route.params?.role ? navigation.goBack() : setMode('landing'))}
+      onBack={() => (route.params?.role ? leaveAuth() : setMode('landing'))}
     >
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
-      >
+      <View style={styles.flex}>
         <ScrollView
+          ref={scrollRef}
+          style={styles.flex}
           contentContainerStyle={styles.formScroll}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
+          automaticallyAdjustKeyboardInsets
           showsVerticalScrollIndicator={false}
-          bounces={false}
+          nestedScrollEnabled
         >
           <SensitiveCSQMask>
             <View style={styles.card}>
@@ -305,6 +329,10 @@ export default function SignInScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
+                  returnKeyType="next"
+                  blurOnSubmit={false}
+                  onFocus={revealPassword}
+                  onSubmitEditing={() => passwordRef.current?.focus()}
                   value={email}
                   onChangeText={(v) => {
                     setEmail(v);
@@ -314,6 +342,7 @@ export default function SignInScreen() {
                   error={errors.email}
                 />
                 <AppTextField
+                  fieldRef={passwordRef}
                   label="Password"
                   leftIcon="lock-closed-outline"
                   placeholder="••••••••"
@@ -326,6 +355,7 @@ export default function SignInScreen() {
                     clearFormError();
                   }}
                   returnKeyType="done"
+                  onFocus={revealPassword}
                   onSubmitEditing={handleSignIn}
                   error={errors.password}
                 />
@@ -352,13 +382,17 @@ export default function SignInScreen() {
           <TouchableOpacity style={styles.linkRow} onPress={handleForgotPassword}>
             <Text style={styles.linkText}>Forgot Password?</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => navigation.navigate(Screen.createAccount)} style={styles.switchRow}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate(Screen.createAccount, { role })}
+            style={styles.switchRow}
+            accessibilityRole="button"
+            accessibilityLabel="Create account"
+          >
             <Text style={styles.switchPrompt}>Don't have an account? </Text>
             <Text style={styles.switchLink}>Create Account</Text>
           </TouchableOpacity>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
     </AuthFormHeader>
   );
 }
@@ -369,7 +403,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: Spacing.base,
     paddingTop: Spacing.lg,
-    paddingBottom: Spacing.xl,
+    paddingBottom: Spacing['3xl'],
   },
   card: {
     backgroundColor: Colors.white,
@@ -433,7 +467,14 @@ const styles = StyleSheet.create({
   submitWrap: { marginTop: Spacing.sm },
   linkRow: { alignItems: 'center', marginTop: Spacing.md },
   linkText: { fontSize: Typography.size.sm, color: Colors.purple, fontWeight: '600' },
-  switchRow: { flexDirection: 'row', justifyContent: 'center', marginTop: Spacing.xl },
+  switchRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.base,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.sm,
+  },
   switchPrompt: { fontSize: Typography.size.sm, color: Colors.text },
   switchLink: { fontSize: Typography.size.sm, color: Colors.purple, fontWeight: '700' },
 });

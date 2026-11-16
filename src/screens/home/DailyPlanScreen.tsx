@@ -5,7 +5,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius, Shadow, WELLNESS_CATEGORIES } from '../../theme';
+import { Colors, Typography, Spacing, Radius, Shadow, WELLNESS_CATEGORIES, tabBarScrollPadding } from '../../theme';
 import { useAppStore } from '../../store';
 import { planService, wellnessScoreService } from '../../services/firebase';
 import { gamificationService } from '../../services/gamificationService';
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
   },
   celebrationText: { fontSize: Typography.size.sm, color: Colors.success, fontWeight: '600', textAlign: 'center' },
-  content: { padding: Spacing.base, gap: Spacing.md },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   taskCard: {
     backgroundColor: Colors.white, borderRadius: Radius.lg,
     padding: Spacing.base, ...Shadow.sm, gap: Spacing.sm,

@@ -11,7 +11,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
-import { Colors, Typography, Spacing, Radius, WELLNESS_CATEGORIES } from '../../theme';
+import { Colors, Typography, Spacing, Radius, WELLNESS_CATEGORIES, tabBarScrollPadding } from '../../theme';
 import { useAppStore } from '../../store';
 import type { WellnessCategoryKey } from '../../types';
 import WellnessOrbitRing, { getOrbitPanelSize } from '../../components/home/WellnessOrbitRing';
@@ -38,6 +38,8 @@ import NextBestActions from '../../components/home/NextBestActions';
 import WeeklyStepChallenge from '../../components/home/WeeklyStepChallenge';
 import AssessmentInsights from '../../components/home/AssessmentInsights';
 import BiologicalAgeCard from '../../components/home/BiologicalAgeCard';
+import RefineWellnessCard from '../../components/home/RefineWellnessCard';
+import { isDeeperCheckInComplete } from '../../utils/wellnessAssessmentScoring';
 import ScoreImprovementCard from '../../components/wellness/ScoreImprovementCard';
 import { getScoreImprovementAdvice } from '../../utils/recommendedModules';
 import { navigateToLinkedModule } from '../../utils/fitnessModuleRouter';
@@ -75,6 +77,7 @@ export default function HomeScreen() {
   const {
     user,
     wellnessScore,
+    lastQuizAnswers,
     dailyPlan,
     activity,
     carePlan,
@@ -99,6 +102,7 @@ export default function HomeScreen() {
     useShallow((s) => ({
       user: s.user,
       wellnessScore: s.wellnessScore,
+      lastQuizAnswers: s.lastQuizAnswers,
       dailyPlan: s.dailyPlan,
       activity: s.activity,
       carePlan: s.carePlan,
@@ -135,6 +139,8 @@ export default function HomeScreen() {
   const [dayOneDone, setDayOneDone] = useState(true);
   const [appPurpose, setAppPurpose] = useState<AppPurpose | null>(null);
   const [screenFocused, setScreenFocused] = useState(true);
+  const [storedDeeperComplete, setStoredDeeperComplete] = useState(false);
+  const [hideRefinePrompt, setHideRefinePrompt] = useState(false);
   const offeredDayOne = useRef(false);
   const lastHealthSyncAt = useRef(0);
   const healthSyncInFlight = useRef(false);
@@ -295,7 +301,7 @@ export default function HomeScreen() {
     onboardingStorage.hasCompletedDayOneChecklist(user.uid).then((done) => {
       if (!cancelled) setDayOneDone(done);
     });
-    onboardingStorage.shouldShowAppTour(user.uid).then((show) => {
+    onboardingStorage.shouldShowAppTour(user.uid, user.createdAt).then((show) => {
       if (!cancelled && show) setShowInAppGuide(true);
     });
     (async () => {
@@ -342,8 +348,14 @@ export default function HomeScreen() {
       setScreenFocused(true);
       // Skip lifestyle rewrite on every tab return — activity refresh only, throttled.
       syncHealthKit({ applyLifestyle: false });
+      if (user?.uid) {
+        onboardingStorage.hasDeeperCheckInComplete(user.uid).then(setStoredDeeperComplete).catch(() => {});
+        onboardingStorage.hasAppTourReplay(user.uid).then((replay) => {
+          if (replay) setShowInAppGuide(true);
+        }).catch(() => {});
+      }
       return () => setScreenFocused(false);
-    }, [syncHealthKit]),
+    }, [syncHealthKit, user?.uid]),
   );
 
   const maybeOfferDayOne = useCallback(() => {
@@ -469,6 +481,12 @@ export default function HomeScreen() {
     }
   }, []);
 
+  const openDeeperCheckIn = useCallback(() => {
+    if (navigationRef.isReady()) {
+      navigationRef.navigate(Screen.wellnessQuiz, { mode: 'deeper' });
+    }
+  }, []);
+
   const openPurposeLead = useCallback(() => {
     if (appPurpose === 'clinician') {
       navigation.navigate(Screen.tabMyCare, { screen: Screen.connectClinician });
@@ -505,6 +523,11 @@ export default function HomeScreen() {
   const weeklyStepsTotal = weeklySteps || (activity?.steps ?? 0) * 5;
   const scoreImproved = wellnessScore && wellnessScore.overall >= 8;
   const hasAssessment = !!wellnessScore;
+  const deeperComplete =
+    !!user?.deeperCheckInComplete ||
+    storedDeeperComplete ||
+    isDeeperCheckInComplete(lastQuizAnswers);
+  const showRefinePrompt = hasAssessment && !deeperComplete && !hideRefinePrompt;
   const improvementPlan = useMemo(
     () => getScoreImprovementAdvice(wellnessScore?.categories, 3),
     [wellnessScore?.categories],
@@ -522,6 +545,20 @@ export default function HomeScreen() {
         removeClippedSubviews
       >
         <TrialCountdownBanner />
+
+        {carePlan ? (
+          <CarePlanBanner
+            carePlan={carePlan}
+            isNew={hasUnseenCarePlan}
+            onPress={() => {
+              if (user?.clinicianId) {
+                navigation.navigate(Screen.tabMyCare, { screen: Screen.carePlan });
+              } else {
+                navigation.navigate(Screen.tabMore, { screen: Screen.carePlan });
+              }
+            }}
+          />
+        ) : null}
 
         {!hasAssessment && (
           <MarketingHero onStartQuiz={openWellnessQuiz} />
@@ -612,17 +649,10 @@ export default function HomeScreen() {
           </View>
         </AppCard>
 
-        {carePlan && Platform.OS !== 'ios' ? (
-          <CarePlanBanner
-            carePlan={carePlan}
-            isNew={hasUnseenCarePlan}
-            onPress={() => {
-              if (user?.clinicianId) {
-                navigation.navigate(Screen.tabMyCare, { screen: Screen.carePlan });
-              } else {
-                navigation.navigate(Screen.tabMore, { screen: Screen.carePlan });
-              }
-            }}
+        {showRefinePrompt ? (
+          <RefineWellnessCard
+            onStart={openDeeperCheckIn}
+            onLater={() => setHideRefinePrompt(true)}
           />
         ) : null}
 
@@ -645,7 +675,8 @@ export default function HomeScreen() {
           wellnessScore={wellnessScore}
           heightCm={user?.heightCm}
           weightKg={user?.weightKg}
-          onImproveScore={openWellnessQuiz}
+          onImproveScore={showRefinePrompt ? openDeeperCheckIn : undefined}
+          showAccuracyPrompt={showRefinePrompt}
           onAddDateOfBirth={openProfile}
           onOpenVirtualTwin={openVirtualTwin}
         />
@@ -678,12 +709,14 @@ export default function HomeScreen() {
             <HomeNextSteps
               startHereDone={startHereDone || funnelComplete}
               dayOneDone={dayOneDone}
+              needsDeeperCheckIn={hasAssessment && !deeperComplete}
               hasCheckedInToday={hasCheckedInToday}
               healthConnected={healthAvailable}
               dailyPlan={dailyPlan}
               carePlan={carePlan}
               onStartHere={() => setShowStartHere(true)}
               onDayOne={() => setShowDayOne(true)}
+              onDeeperCheckIn={openDeeperCheckIn}
               onCheckIn={() => navigation.navigate(Screen.dailyCheckIn)}
               onDailyPlan={() => navigation.navigate(Screen.dailyPlan)}
               onCarePlan={() => navigation.navigate(Screen.tabMyCare, { screen: Screen.carePlan })}
@@ -805,24 +838,6 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
-        {hasAssessment && (
-          <AppCard style={styles.retakeCard}>
-            <TouchableOpacity
-              style={styles.retakeRow}
-              onPress={openWellnessQuiz}
-            >
-              <View style={styles.retakeIconWrap}>
-                <IconBadge name="arrow-redo-outline" color={Colors.primary} size="sm" />
-              </View>
-              <View style={styles.retakeInfo}>
-                <Text style={styles.retakeTitle}>Deeper check-in</Text>
-                <Text style={styles.retakeSub}>10 more questions to refine your score</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
-            </TouchableOpacity>
-          </AppCard>
-        )}
-
         {!healthAvailable && (
           <TouchableOpacity
             style={styles.hkPrompt}
@@ -884,7 +899,11 @@ const SHORTCUTS = [
 
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
-  content: { padding: Spacing.base, gap: Spacing.sm, paddingBottom: Spacing['2xl'] },
+  content: {
+    padding: Spacing.base,
+    gap: Spacing.sm,
+    paddingBottom: tabBarScrollPadding,
+  },
   guidanceGroup: { gap: 6 },
   activityDashCard: { padding: 0, overflow: 'hidden' },
   celebrationBanner: {

@@ -81,6 +81,22 @@ export const firebaseAuth = {
     if (!currentUser) {
       throw new Error('No current user found');
     }
+
+    // Prefer branded Cloud Function email when SMTP is configured server-side.
+    try {
+      const { cloudFunctions } = await import('./cloudFunctions');
+      const branded = await cloudFunctions.sendBrandedVerificationEmail(
+        appConfig.emailVerificationContinueUrl,
+      );
+      if (branded?.alreadyVerified) return;
+      if (branded?.sent) {
+        logger.log('Branded verification email sent successfully');
+        return;
+      }
+    } catch (error) {
+      console.warn('Branded verification email unavailable; using Firebase Auth template:', error);
+    }
+
     // Prefer continue URL so the link lands on our confirmation page; if the
     // URL/domain is misconfigured in Firebase Console, fall back to the default
     // Firebase verification email (still verifies the account).
@@ -432,8 +448,61 @@ function mapMessageDoc(d: { id: string; data: () => Record<string, unknown> }): 
   return { ...data, id: d.id };
 }
 
+/** Open = clinician started (or legacy thread with messages). Closed = clinician ended. */
+export function isMessageThreadOpen(thread?: MessageThread | null): boolean {
+  if (!thread) return false;
+  if (thread.status === 'closed') return false;
+  if (thread.status === 'open') return true;
+  // Legacy threads created before status field — treat as open if used.
+  return !!(thread.lastMessageAt || thread.startedAt);
+}
+
+async function assertPatientLinkedToClinician(patientId: string, clinicianId: string): Promise<void> {
+  const patientDoc = await firestore().collection('patients').doc(patientId).get();
+  if (patientDoc.data()?.linkedClinicianId === clinicianId) return;
+
+  const linkedDoc = await firestore()
+    .collection('clinicians')
+    .doc(clinicianId)
+    .collection('linkedPatients')
+    .doc(patientId)
+    .get();
+  if (linkedDoc.exists()) return;
+
+  const userDoc = await firestore().collection('users').doc(patientId).get();
+  if (userDoc.data()?.clinicianId === clinicianId) return;
+
+  throw new Error('You can only start chats with patients linked to your practice.');
+}
+
 export const messageService = {
   threadId: messageThreadId,
+  isOpen: isMessageThreadOpen,
+
+  watchThread: (
+    patientId: string,
+    clinicianId: string,
+    cb: (thread: MessageThread | null) => void
+  ) => {
+    if (!isFirebaseReady()) {
+      cb(null);
+      return NOOP_UNSUB;
+    }
+    const threadId = messageThreadId(patientId, clinicianId);
+    return firestore()
+      .collection('messageThreads')
+      .doc(threadId)
+      .onSnapshot(
+        (doc) => {
+          if (!doc.exists()) {
+            cb(null);
+            return;
+          }
+          cb(doc.data() as MessageThread);
+        },
+        (error) => logFirestoreListenerError('watchThread', error)
+      );
+  },
 
   watchMessages: (
     patientId: string,
@@ -458,28 +527,118 @@ export const messageService = {
       );
   },
 
+  /**
+   * Clinician-only. Opens (or re-opens) a conversation with a linked patient.
+   * Patients cannot call this.
+   */
+  startConversation: async (patientId: string, clinicianId: string): Promise<void> => {
+    if (!isFirebaseReady()) return;
+    const uid = auth().currentUser?.uid;
+    if (!uid || uid !== clinicianId) {
+      throw new Error('Only the clinician can start a conversation.');
+    }
+    await assertPatientLinkedToClinician(patientId, clinicianId);
+
+    const threadId = messageThreadId(patientId, clinicianId);
+    const threadRef = firestore().collection('messageThreads').doc(threadId);
+    const now = new Date().toISOString();
+    const existing = await threadRef.get();
+    const previous = existing.exists() ? (existing.data() as MessageThread) : null;
+
+    // delete() on a missing document fails the whole write, so only clear close
+    // fields when reopening a thread that already exists.
+    const payload: Record<string, unknown> = {
+      patientId,
+      clinicianId,
+      status: 'open',
+      startedAt: previous?.startedAt ?? now,
+      startedBy: previous?.startedBy ?? clinicianId,
+      updatedAt: now,
+      patientUnread: 0,
+      clinicianUnread: 0,
+    };
+    if (existing.exists()) {
+      payload.closedAt = firestore.FieldValue.delete();
+      payload.closedBy = firestore.FieldValue.delete();
+    }
+
+    await threadRef.set(payload, { merge: true });
+  },
+
+  /**
+   * Clinician-only. Ends the conversation so neither side can send until reopened.
+   */
+  endConversation: async (patientId: string, clinicianId: string): Promise<void> => {
+    if (!isFirebaseReady()) return;
+    const uid = auth().currentUser?.uid;
+    if (!uid || uid !== clinicianId) {
+      throw new Error('Only the clinician can end a conversation.');
+    }
+    const threadId = messageThreadId(patientId, clinicianId);
+    const threadRef = firestore().collection('messageThreads').doc(threadId);
+    const snap = await threadRef.get();
+    if (!snap.exists()) {
+      throw new Error('No conversation to end.');
+    }
+    const now = new Date().toISOString();
+    await threadRef.set(
+      {
+        status: 'closed',
+        closedAt: now,
+        closedBy: clinicianId,
+        updatedAt: now,
+      },
+      { merge: true }
+    );
+  },
+
   sendMessage: async (
     patientId: string,
     clinicianId: string,
     message: Omit<Message, 'id'>
   ) => {
     if (!isFirebaseReady()) return;
+    const uid = auth().currentUser?.uid;
+    if (!uid || message.senderId !== uid) {
+      throw new Error('You can only send messages as yourself.');
+    }
+
     const threadId = messageThreadId(patientId, clinicianId);
     const threadRef = firestore().collection('messageThreads').doc(threadId);
     const msgRef = threadRef.collection('messages').doc();
     const timestamp = message.timestamp || new Date().toISOString();
     const payload: Message = { ...message, id: msgRef.id, timestamp };
-
     const unreadField = message.senderId === patientId ? 'clinicianUnread' : 'patientUnread';
+    const senderIsClinician = message.senderId === clinicianId;
+    const senderIsPatient = message.senderId === patientId;
+
+    if (!senderIsClinician && !senderIsPatient) {
+      throw new Error('Sender is not a participant in this conversation.');
+    }
+
     await firestore().runTransaction(async (tx) => {
       const threadSnap = await tx.get(threadRef);
-      const currentUnread = threadSnap.data()?.[unreadField] ?? 0;
+      const threadData = threadSnap.exists() ? (threadSnap.data() as MessageThread) : null;
+      const open = isMessageThreadOpen(threadData);
+      const closed = threadData?.status === 'closed';
+
+      // Patients may never create a thread — clinician must start first.
+      // Once a non-closed thread exists, patients can reply.
+      if (senderIsPatient && (!threadData || closed)) {
+        throw new Error('Waiting for your clinician to start the conversation.');
+      }
+      if (senderIsClinician && !open) {
+        throw new Error('Start the conversation before sending messages.');
+      }
+
+      const currentUnread = (threadData?.[unreadField as keyof MessageThread] as number | undefined) ?? 0;
       tx.set(msgRef, payload);
       tx.set(
         threadRef,
         {
           patientId,
           clinicianId,
+          status: 'open',
           lastMessage: message.content,
           lastMessageAt: timestamp,
           lastSenderId: message.senderId,
@@ -496,6 +655,9 @@ export const messageService = {
     const threadId = messageThreadId(patientId, clinicianId);
     const threadRef = firestore().collection('messageThreads').doc(threadId);
     const unreadField = readerId === patientId ? 'patientUnread' : 'clinicianUnread';
+
+    const threadSnap = await threadRef.get();
+    if (!threadSnap.exists()) return;
 
     const snap = await threadRef.collection('messages').get();
     const unread = snap.docs.filter((d) => {

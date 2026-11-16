@@ -1,10 +1,10 @@
 // src/screens/auth/GoalSelectionScreen.tsx
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, useWindowDimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, useWindowDimensions, Alert, Pressable } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing } from '../../theme';
-import { AppCard, AnimatedPressable, BrandButton, IconBadge, BackButton } from '../../components/ui';
+import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
+import { AnimatedPressable, BrandButton, IconBadge, BackButton } from '../../components/ui';
 import AppScreen from '../../components/common/AppScreen';
 import { useAppStore } from '../../store';
 import { userService } from '../../services/firebase';
@@ -110,35 +110,34 @@ export default function GoalSelectionScreen() {
           {ONBOARDING_GOALS.map((goal) => {
             const isSelected = selected.has(goal.id);
             return (
-              <AnimatedPressable
+              <Pressable
                 key={goal.id}
                 onPress={() => toggleGoal(goal.id)}
-                style={[styles.cardPress, { width: cardWidth }]}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: isSelected }}
+                accessibilityLabel={goal.title}
+                android_ripple={{ color: `${goal.color}22` }}
+                style={({ pressed }) => [
+                  styles.card,
+                  { width: cardWidth },
+                  isSelected && { borderColor: goal.color },
+                  pressed && styles.cardPressed,
+                ]}
               >
-                <AppCard
-                  style={[
-                    styles.card,
-                    isSelected && {
-                      borderColor: goal.color,
-                      backgroundColor: `${goal.color}10`,
-                    },
-                  ]}
-                >
-                  {isSelected ? (
-                    <View style={[styles.checkBadge, { backgroundColor: goal.color }]}>
-                      <Ionicons name="checkmark" size={12} color={Colors.white} />
-                    </View>
-                  ) : null}
-                  <IconBadge
-                    name={goal.icon}
-                    color={goal.color}
-                    size="lg"
-                    variant={isSelected ? 'solid' : 'soft'}
-                  />
-                  <Text style={styles.cardTitle}>{goal.title}</Text>
-                  <Text style={styles.cardSub}>{goal.subtitle}</Text>
-                </AppCard>
-              </AnimatedPressable>
+                {isSelected ? (
+                  <View style={[styles.checkBadge, { backgroundColor: goal.color }]}>
+                    <Ionicons name="checkmark" size={12} color={Colors.white} />
+                  </View>
+                ) : null}
+                <IconBadge
+                  name={goal.icon}
+                  color={goal.color}
+                  size="lg"
+                  variant={isSelected ? 'solid' : 'soft'}
+                />
+                <Text style={styles.cardTitle}>{goal.title}</Text>
+                <Text style={styles.cardSub}>{goal.subtitle}</Text>
+              </Pressable>
             );
           })}
         </View>
@@ -212,7 +211,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.lg,
     justifyContent: 'space-between',
   },
-  cardPress: { flexGrow: 0 },
   card: {
     alignItems: 'center',
     gap: Spacing.sm,
@@ -221,7 +219,13 @@ const styles = StyleSheet.create({
     minHeight: 168,
     borderWidth: 1.5,
     borderColor: Colors.borderLight,
+    borderRadius: Radius.xl,
+    backgroundColor: Colors.surface,
     position: 'relative',
+    ...Shadow.sm,
+  },
+  cardPressed: {
+    opacity: 0.92,
   },
   checkBadge: {
     position: 'absolute',
@@ -232,6 +236,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 1,
   },
   cardTitle: {
     fontSize: Typography.size.sm,

@@ -32,9 +32,9 @@ const ROLES: { role: UserRole; icon: string; title: string; desc: string; featur
   {
     role: 'clinician',
     icon: '🩺',
-    title: 'Clinician / Doctor',
+    title: 'Professional',
     color: Colors.accent,
-    desc: 'I want to support my patients\' wellness journey',
+    desc: 'I am a doctor, clinician, neurosurgeon, physiotherapist, or physical therapist',
     features: [
       'Patient management portal',
       'Custom care plan creation',

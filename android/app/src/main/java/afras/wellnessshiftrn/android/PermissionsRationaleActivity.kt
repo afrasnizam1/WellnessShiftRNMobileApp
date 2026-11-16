@@ -13,7 +13,7 @@ class PermissionsRationaleActivity : AppCompatActivity() {
     webView.webViewClient = object : WebViewClient() {
       override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean = false
     }
-    webView.loadUrl("https://wellnessshift.co.uk/privacy")
+    webView.loadUrl("https://wellnesshift.co.uk/privacy")
     setContentView(webView)
   }
 }

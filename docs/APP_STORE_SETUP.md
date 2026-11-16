@@ -58,13 +58,13 @@ In-app restore lives on `PaywallScreen` → **Restore** (`subscriptionService.re
 
 ## 3. Privacy / Terms (website)
 
-In-app disclosures in `src/data/legalContent.ts` are the source of truth. Update https://wellnessshift.co.uk/privacy (and related pages) to match before review.
+In-app disclosures in `src/data/legalContent.ts` are the source of truth. Update https://wellnesshift.co.uk/privacy (and related pages) to match before review.
 
 ### Paste these website fixes (required)
 
 **Age policy** — replace any “13–16 parental consent” wording with:
 
-> You must be at least 16 years old to create an App account. The App is not directed at children under 16. If you believe we have collected data from someone under 16, contact support@wellnessshift.co.uk and we will delete it.
+> You must be at least 16 years old to create an App account. The App is not directed at children under 16. If you believe we have collected data from someone under 16, contact support@wellnesshift.co.uk and we will delete it.
 
 **Contentsquare / analytics** — replace “on by default” with:
 
@@ -95,6 +95,9 @@ Also refresh the embedded “In-App Privacy Policy” block on the website from 
 |------|------------|--------|
 | `enableSocialFeed` | `false` | Hides Social Feed from More |
 | `enableCommunityLeaderboard` | `false` | Hides Community Progress / leaderboard |
+| `enableCommunityForum` | `false` | Hides the local-only forum of sample posts |
+| `enableCoachingBookings` | `false` | Hides coach booking that only saves on the phone |
+| `enableNewsletterSignup` | `false` | Hides the newsletter form that does not send mail |
 | `enablePremiumShop` | `false` | Shop screen redirects to paywall |
 | `enableGoogleSignIn` | `false` | Apple + email only |
 
@@ -137,3 +140,84 @@ keytool -genkeypair -v -storetype PKCS12 \
 4. Build: `cd android && ./gradlew bundleRelease`
 5. In Play Console → App integrity → use Play App Signing; upload the AAB signed with this upload key.
 6. After creating the release keystore, add its SHA-1 / SHA-256 to Firebase Android app settings (needed if you re-enable Google Sign-In later).
+
+The upload keystore for this machine was created on 29 Sep 2026 and is gitignored:
+
+- `android/upload-keystore.jks`
+- `android/keystore.properties` (password lives only here — copy both into a password manager)
+
+Upload certificate fingerprints (public):
+
+- SHA-1: `5D:BF:48:E2:AB:B6:A0:74:01:5B:6C:8D:C5:A1:AA:01:DD:34:6E:48`
+- SHA-256: `2E:7B:68:A0:0F:E1:34:DC:EE:94:38:4F:18:C0:B2:B8:06:66:C9:38:65:35:4E:89:25:CC:77:F9:8C:9A:64:94`
+
+Release bundle built 29 Sep 2026 and signed with that upload certificate (`jarsigner` reported `jar verified`):
+
+`android/app/build/outputs/bundle/release/app-release.aab`
+
+## 10. Listing copy, privacy labels, and Data safety
+
+Paste these into App Store Connect and Play Console. They match `ios/WellnessShift/PrivacyInfo.xcprivacy` and the live privacy policy. Do not describe Wellness Coach as generative AI.
+
+**Name:** Wellness Shift
+
+**Subtitle (30):** Score, plan, and learn
+
+**Promotional text:** A daily wellness score, a plan, and practical learning for food, movement, sleep, and habits. Education only — it does not diagnose or replace your GP.
+
+**Keywords:** wellness,fitness,nutrition,sleep,habits,health score,daily plan,learning
+
+**Short description (Play, 80):** Daily wellness score, plan, and practical health learning.
+
+**Full description:**
+
+Wellness Shift helps you follow one wellness score, a daily plan, and short learning on food, movement, sleep, and habits.
+
+What you can do:
+- See a wellness score and a daily plan
+- Learn from fitness, nutrition, and anatomy guides
+- Log habits, steps, and check-ins
+- Optionally read activity and sleep from Apple Health or Health Connect
+- Link a clinician with an invite code if they use Wellness Shift
+- Use Wellness Coach for rule-based lifestyle guidance
+
+Wellness Shift is education and wellness support. It does not diagnose, treat, or replace advice from your GP. In an emergency call 999.
+
+Subscriptions: Growth and Pro unlock more of the plan and learning. Prices are shown in the app before you confirm with Apple or Google. You can restore purchases from the paywall.
+
+**Privacy nutrition (App Store Connect)** — Data used to track you: none. Tracking: off.
+
+| Data type | Linked to user | Used for tracking | Purpose |
+|-----------|----------------|-------------------|---------|
+| Name | Yes | No | App functionality |
+| Email address | Yes | No | App functionality |
+| Health and fitness | Yes | No | App functionality, product personalisation |
+| Product interaction | Yes | No | App functionality, analytics |
+| Device ID | Yes | No | App functionality, analytics |
+| Crash data | No | No | App functionality |
+| Other user content | Yes | No | App functionality, product personalisation |
+| Purchase history | Yes | No | App functionality |
+
+Analytics and session replay are collected only if the user turns on Allow analytics. Crash reports are not used for advertising.
+
+**Play Data safety**
+
+- Collects user data: Yes. Sells data: No. Shares data with third parties: No.
+- Encrypted in transit: Yes.
+- Users can request deletion: Yes, in the app under Data Rights.
+- Personal info: name, email — collected, required for the account.
+- Health and fitness: collected when the user enters it or connects Apple Health / Health Connect (steps, distance, calories, exercise, heart rate, sleep, weight, height, blood pressure, blood glucose, oxygen, respiratory rate). Optional.
+- Messages: collected when the user messages a linked clinician.
+- App activity: collected. Product analytics only if the user opts in.
+- Device or other IDs and crash logs: collected for diagnostics. Crash logs are not used for ads.
+- Financial info: purchase history, so Growth or Pro can be restored.
+- Photos: the food scan can read an image the user picks. Do not declare photos as collected on a server unless that upload is enabled.
+
+**Screenshots**
+
+- App Store 6.9-inch (1320×2868): `store-assets/ios/app-store-6.9-fitness-hub.png` (scaled from the iPhone 17 Pro simulator). Capture Home, a learning guide, and Analytics on an iPhone 17 Pro Max simulator before submission so the set is not a single screen.
+- Play phone shots must be 9:16. The Pixel 10 Pro frame (1280×2856) is taller than 9:16, so crop before upload. Do not upload shots that still show the Metro Fast Refresh bar or the red debugger toast.
+
+**What still needs your store login**
+
+This repo cannot open App Store Connect or Play Console. The Mac keychain has an Apple Development certificate for team `J5TW7P57Y2` and no Apple Distribution certificate, so a TestFlight upload cannot be signed from here until Xcode is signed in with the Apple Developer account that can create that certificate. Play internal testing starts when you upload `app-release.aab` in Play Console → Testing → Internal testing, with the four subscription products from section 8.

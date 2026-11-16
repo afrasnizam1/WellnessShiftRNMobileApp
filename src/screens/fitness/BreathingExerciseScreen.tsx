@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import AppScreen from '../../components/common/AppScreen';
 import {
   BREATHING_COACHING,
@@ -136,7 +136,12 @@ export default function BreathingExerciseScreen() {
   const liveCue = coaching?.phases[phaseKey] ?? coaching?.phases.inhale;
 
   return (
-    <AppScreen style={styles.safe}>
+    <AppScreen
+      mesh={false}
+      backgroundColor="#0A0A1A"
+      statusBarStyle="light-content"
+      style={styles.safe}
+    >
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => {
@@ -323,7 +328,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: Spacing.base,
-    paddingBottom: Spacing['3xl'],
+    paddingBottom: tabBarScrollPadding,
     gap: Spacing.md,
   },
   sessionBody: { flex: 1 },
@@ -453,7 +458,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
     marginTop: Spacing.sm,
   },
-  controls: { paddingHorizontal: Spacing.base, paddingBottom: Spacing['2xl'] },
+  controls: { paddingHorizontal: Spacing.base, paddingBottom: tabBarScrollPadding },
   controlBtn: {
     borderRadius: Radius.xl,
     paddingVertical: Spacing.base,

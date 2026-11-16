@@ -19,18 +19,18 @@ export type BrainGameMeta = {
 };
 
 export const BRAIN_GAMES: BrainGameMeta[] = [
-  { id: 'memory-match', title: 'Memory Match', icon: '🃏', color: '#8C59BF', desc: 'Flip cards to find matching pairs — trains working memory', domain: 'memory', domainLabel: 'Working memory', benefit: 'Strengthens short-term recall used in learning and daily tasks', sessionTip: 'Say each symbol aloud when you flip — dual coding boosts retention', estMinutes: '3–5 min' },
-  { id: 'reaction-time', title: 'Reaction Time', icon: '⚡', color: '#F39C12', desc: 'Five-trial reflex test with personalised feedback', domain: 'processing', domainLabel: 'Processing speed', benefit: 'Tracks alertness and psychomotor speed — useful for driving and sport', sessionTip: 'Rest your finger on the screen edge; don\'t anticipate the green', estMinutes: '2 min' },
-  { id: 'quick-math', title: 'Quick Math', icon: '🔢', color: '#27AE60', desc: 'Mental arithmetic with easy, medium, and hard tiers', domain: 'processing', domainLabel: 'Numerical fluency', benefit: 'Keeps arithmetic circuits sharp and supports quick decision-making', sessionTip: 'Start on Easy for a warm-up, then push to Medium for 5+ streak', estMinutes: '3–6 min' },
+  { id: 'memory-match', title: 'Memory Match', icon: '🧩', color: '#8C59BF', desc: 'Flip cards to find matching pairs — trains working memory', domain: 'memory', domainLabel: 'Working memory', benefit: 'Strengthens short-term recall used in learning and daily tasks', sessionTip: 'Say each symbol aloud when you flip — dual coding boosts retention', estMinutes: '3–5 min' },
+  { id: 'reaction-time', title: 'Reaction Time', icon: '⚡️', color: '#F39C12', desc: 'Five-trial reflex test with personalised feedback', domain: 'processing', domainLabel: 'Processing speed', benefit: 'Tracks alertness and psychomotor speed — useful for driving and sport', sessionTip: 'Rest your finger on the screen edge; don\'t anticipate the green', estMinutes: '2 min' },
+  { id: 'quick-math', title: 'Quick Math', icon: '🧮', color: '#27AE60', desc: 'Mental arithmetic with easy, medium, and hard tiers', domain: 'processing', domainLabel: 'Numerical fluency', benefit: 'Keeps arithmetic circuits sharp and supports quick decision-making', sessionTip: 'Start on Easy for a warm-up, then push to Medium for 5+ streak', estMinutes: '3–6 min' },
   { id: 'color-match', title: 'Color Match', icon: '🎨', color: '#1ABC9C', desc: 'Stroop test — match ink colour to the word, not what it says', domain: 'executive', domainLabel: 'Cognitive flexibility', benefit: 'Trains inhibition — ignoring misleading information under pressure', sessionTip: 'Focus on the ink colour only; ignore the letters', estMinutes: '3 min' },
-  { id: 'word-recall', title: 'Word Recall', icon: '💬', color: '#9B59B6', desc: 'Memorise themed word lists, then type them from memory', domain: 'memory', domainLabel: 'Verbal memory', benefit: 'Mimics list-learning used in appointments, shopping, and study', sessionTip: 'Group words into a story or image while studying', estMinutes: '4 min' },
+  { id: 'word-recall', title: 'Word Recall', icon: '🧠', color: '#9B59B6', desc: 'Memorise themed word lists, then type them from memory', domain: 'memory', domainLabel: 'Verbal memory', benefit: 'Mimics list-learning used in appointments, shopping, and study', sessionTip: 'Group words into a story or image while studying', estMinutes: '4 min' },
   { id: 'pattern-recognition', title: 'Pattern Recognition', icon: '🔷', color: '#3498DB', desc: 'Memorise a grid pattern, then pick the correct match', domain: 'visual', domainLabel: 'Visual memory', benefit: 'Supports spatial reasoning and detail retention', sessionTip: 'Scan row-by-row, not randomly — systematic encoding helps', estMinutes: '4 min' },
-  { id: 'number-sequence', title: 'Number Sequence', icon: '🔟', color: '#E74C3C', desc: 'Arithmetic, geometric, and alternating sequences', domain: 'executive', domainLabel: 'Logical reasoning', benefit: 'Pattern detection transfers to problem-solving and planning', sessionTip: 'Check the gap between numbers before guessing the rule', estMinutes: '3–5 min' },
-  { id: 'attention-switch', title: 'Attention Switch', icon: '🔄', color: '#E67E22', desc: 'Rapidly switch between number, colour, and wellness rules', domain: 'attention', domainLabel: 'Task switching', benefit: 'Builds mental agility when juggling multiple demands', sessionTip: 'Read the rule label at the top before each answer', estMinutes: '3 min' },
+  { id: 'number-sequence', title: 'Number Sequence', icon: '🔢', color: '#E74C3C', desc: 'Arithmetic, geometric, and alternating sequences', domain: 'executive', domainLabel: 'Logical reasoning', benefit: 'Pattern detection transfers to problem-solving and planning', sessionTip: 'Check the gap between numbers before guessing the rule', estMinutes: '3–5 min' },
+  { id: 'attention-switch', title: 'Attention Switch', icon: '🎛️', color: '#E67E22', desc: 'Rapidly switch between number, colour, and wellness rules', domain: 'attention', domainLabel: 'Task switching', benefit: 'Builds mental agility when juggling multiple demands', sessionTip: 'Read the rule label at the top before each answer', estMinutes: '3 min' },
   { id: 'speed-reading', title: 'Speed Reading', icon: '📖', color: '#2C3E50', desc: 'Wellness passages with comprehension checks and WPM tracking', domain: 'processing', domainLabel: 'Reading fluency', benefit: 'Pairs faster reading with comprehension — not speed alone', sessionTip: 'Use your finger to guide your eyes; re-read only if needed', estMinutes: '5–8 min' },
   { id: 'focus-training', title: 'Focus Training', icon: '🎯', color: '#2980B9', desc: 'Tap wellness targets; avoid red distractions for 30 seconds', domain: 'attention', domainLabel: 'Selective attention', benefit: 'Trains filtering distractions — key for deep work and meditation', sessionTip: 'Keep eyes on the arena centre; use peripheral vision', estMinutes: '2 min' },
-  { id: 'visual-puzzle', title: 'Visual Puzzle', icon: '🧩', color: '#8E44AD', desc: 'Memorise and recreate expanding grid patterns', domain: 'visual', domainLabel: 'Spatial memory', benefit: 'Challenges visual working memory as grids grow larger', sessionTip: 'Anchor corners first, then fill the middle cells', estMinutes: '5 min' },
-  { id: 'mental-rotation', title: 'Mental Rotation', icon: '🔀', color: '#16A085', desc: 'Identify the same shape rotated among distractors', domain: 'visual', domainLabel: 'Spatial rotation', benefit: 'Used in navigation, sport, and mechanical reasoning', sessionTip: 'Mentally rotate the target 90° at a time', estMinutes: '4 min' },
+  { id: 'visual-puzzle', title: 'Visual Puzzle', icon: '🪩', color: '#8E44AD', desc: 'Memorise and recreate expanding grid patterns', domain: 'visual', domainLabel: 'Spatial memory', benefit: 'Challenges visual working memory as grids grow larger', sessionTip: 'Anchor corners first, then fill the middle cells', estMinutes: '5 min' },
+  { id: 'mental-rotation', title: 'Mental Rotation', icon: '🔮', color: '#16A085', desc: 'Identify the same shape rotated among distractors', domain: 'visual', domainLabel: 'Spatial rotation', benefit: 'Used in navigation, sport, and mechanical reasoning', sessionTip: 'Mentally rotate the target 90° at a time', estMinutes: '4 min' },
 ];
 
 export function shuffle<T>(items: T[]): T[] {
@@ -47,10 +47,10 @@ export function shuffle<T>(items: T[]): T[] {
 export type MemoryDeck = { id: string; name: string; pairs: string[] };
 
 export const MEMORY_DECKS: MemoryDeck[] = [
-  { id: 'wellness', name: 'Wellness', pairs: ['🧘', '💧', '🥗', '😴', '🚶', '❤️', '🧠', '🌿'] },
-  { id: 'nature', name: 'Nature', pairs: ['🌲', '🌊', '☀️', '🌙', '🦋', '🌸', '🍃', '⛰️'] },
-  { id: 'fitness', name: 'Fitness', pairs: ['🏃', '💪', '🧘', '⚽', '🏊', '🚴', '🤸', '🥊'] },
-  { id: 'mind', name: 'Mind & Mood', pairs: ['😊', '🧠', '💭', '✨', '🎯', '🌈', '🔔', '📓'] },
+  { id: 'wellness', name: 'Wellness', pairs: ['🧘‍♀️', '🫧', '🥑', '🛌', '🫀', '🧬', '🪴', '🩺', '🧴', '🌙'] },
+  { id: 'nature', name: 'Nature', pairs: ['🌋', '🏝️', '🪸', '🦚', '🪷', '🍄', '🌵', '🪐', '☄️', '🌈'] },
+  { id: 'fitness', name: 'Fitness', pairs: ['🏃‍♀️', '🏋️‍♀️', '🚴‍♀️', '🏊‍♀️', '🤸‍♀️', '🥋', '⛸️', '🤿', '🏆', '⏱️'] },
+  { id: 'mind', name: 'Mind & Mood', pairs: ['🧠', '🪞', '🧿', '🪄', '🧩', '🔭', '🎨', '💡', '🎧', '📚'] },
 ];
 
 export function pickMemoryDeck(): MemoryDeck {
@@ -101,7 +101,7 @@ export const WORD_LISTS: Record<WordListTier, string[][]> = {
 };
 
 export function pickWordList(tier: WordListTier = 'medium'): string[] {
-  const counts: Record<WordListTier, number> = { easy: 3, medium: 5, hard: 7 };
+  const counts: Record<WordListTier, number> = { easy: 4, medium: 6, hard: 8 };
   const need = counts[tier];
   const pool = WORD_LISTS[tier];
   const flat = shuffle(pool.flat());
@@ -196,7 +196,7 @@ export function generateColorMatchItem(): { word: string; displayColor: string; 
 
 export function pickMemoryDeckForDifficulty(difficulty: GameDifficulty): MemoryDeck {
   const deck = pickMemoryDeck();
-  const pairCounts: Record<GameDifficulty, number> = { easy: 4, medium: 6, hard: 8 };
+  const pairCounts: Record<GameDifficulty, number> = { easy: 6, medium: 8, hard: 10 };
   const n = pairCounts[difficulty];
   return { ...deck, pairs: shuffle(deck.pairs).slice(0, Math.min(n, deck.pairs.length)) };
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Switch, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
+import { Colors, Typography, Spacing, Radius, Shadow, tabBarScrollPadding } from '../../theme';
 import {
   notificationService,
   notificationPrefsStorage,
@@ -16,7 +16,7 @@ const SETTINGS: { key: ToggleKey; label: string; desc: string; local?: boolean }
   { key: 'dailyPlan', label: 'Daily Plan Reminders', desc: 'Morning reminder for today\'s tasks (9:00)', local: true },
   { key: 'checkin', label: 'Daily Check-In', desc: 'Morning mood and energy reminder (8:00)', local: true },
   { key: 'careplan', label: 'Care Plan Updates', desc: 'Push when your clinician sends a plan', local: false },
-  { key: 'insights', label: 'AI Insights', desc: 'New personalised recommendations', local: false },
+  { key: 'insights', label: 'Wellness Coach', desc: 'New personalised recommendations', local: false },
   { key: 'milestone', label: 'Milestones & Achievements', desc: 'Celebrate your progress', local: false },
   { key: 'inactivity', label: 'Inactivity Reminders', desc: 'Nudge when you haven\'t opened the app', local: false },
 ];
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
   backBtn: { width: 40 },
   backText: { fontSize: 32, color: Colors.primary, lineHeight: 38 },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: Typography.size.base, fontWeight: '700', color: Colors.text },
-  content: { padding: Spacing.base, gap: Spacing.md },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   card: { backgroundColor: Colors.white, borderRadius: Radius.lg, ...Shadow.sm, overflow: 'hidden' },
   row: { flexDirection: 'row', alignItems: 'center', padding: Spacing.base, gap: Spacing.md },
   rowBorder: { borderBottomWidth: 1, borderBottomColor: Colors.borderLight },

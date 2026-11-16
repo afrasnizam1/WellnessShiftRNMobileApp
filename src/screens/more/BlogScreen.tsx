@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Modal,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { AppCard, ScreenHeader, FilterChip } from '../../components/ui';
 import { BLOG_POSTS, type BlogCategory, type BlogPost } from '../../data/blogData';
 import AppScreen from '../../components/common/AppScreen';
@@ -63,7 +63,7 @@ export default function BlogScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   header: { paddingHorizontal: Spacing.base, paddingTop: Spacing.sm },
-  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: Spacing['3xl'] },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   chips: { gap: Spacing.sm, marginBottom: Spacing.sm },
   card: { overflow: 'hidden' },
   image: { width: '100%', height: 140, backgroundColor: Colors.borderLight },
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   excerpt: { fontSize: Typography.size.sm, color: Colors.textSecondary, lineHeight: 18 },
   meta: { fontSize: Typography.size.xs, color: Colors.textTertiary, marginTop: 4 },
   modalScroll: { flex: 1, backgroundColor: Colors.background },
-  modalContent: { paddingBottom: Spacing['3xl'] },
+  modalContent: { paddingBottom: tabBarScrollPadding },
   modalImage: { width: '100%', height: 220 },
   modalTitle: { fontSize: Typography.size.xl, fontWeight: '800', color: Colors.text, padding: Spacing.base, letterSpacing: -0.4 },
   modalMeta: { fontSize: Typography.size.sm, color: Colors.textSecondary, paddingHorizontal: Spacing.base, marginBottom: Spacing.md },

@@ -42,8 +42,8 @@ export const ONBOARDING_GOALS: GoalOption[] = [
     id: 'clinician',
     icon: 'people-outline',
     color: Colors.brand,
-    title: 'GP-referred clinician support',
-    subtitle: 'Only if your GP referred you for a health issue',
+    title: 'Connect with a professional',
+    subtitle: 'A doctor, clinician, neurosurgeon, physiotherapist, or physical therapist',
   },
   { id: 'general', icon: 'sparkles-outline', color: Colors.purple, title: 'Overall wellness', subtitle: 'A balanced approach to health' },
 ];
@@ -101,8 +101,8 @@ export const GOAL_REMINDER_ACTIONS: Record<
   condition: { icon: 'medical-outline', title: 'Health tracking', subtitle: 'Log a symptom or vital sign', tab: Screen.tabFitness, screen: Screen.fitnessHub },
   clinician: {
     icon: 'people-outline',
-    title: 'Connect with your GP-referred clinician',
-    subtitle: 'Only if referred for a health issue — invite code in My Care',
+    title: 'Connect with your professional',
+    subtitle: 'Enter their invite code in My Care',
     tab: Screen.tabMyCare,
     screen: Screen.connectClinician,
   },

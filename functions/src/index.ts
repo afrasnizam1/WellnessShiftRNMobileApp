@@ -2,6 +2,12 @@ import { initializeApp } from 'firebase-admin/app';
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { sendPushToUser, truncate } from './notifications';
 
+export {
+  sendClinicianConnectionRequest,
+  syncSubscriptionEntitlement,
+  sendBrandedVerificationEmail,
+} from './launchHardening';
+
 initializeApp();
 
 /**
@@ -62,19 +68,28 @@ export const onCarePlanSent = onDocumentCreated(
     const {
       patientId,
       planStatus,
+      clinicianName,
+      planName,
     } = plan as {
       patientId?: string;
       planStatus?: string;
+      clinicianName?: string;
+      planName?: string;
     };
 
     if (!patientId) return;
     if (planStatus === 'draft') return;
 
     const planId = event.params.planId;
+    const from = clinicianName?.trim();
+    const title = planName?.trim();
+    const body = from
+      ? `${from} sent you “${title || 'a care plan'}”`
+      : 'Your clinician sent you a care plan';
 
     await sendPushToUser(patientId, 'patient', {
       title: 'New care plan',
-      body: 'Your clinician sent you a care plan',
+      body,
       data: {
         type: 'care_plan',
         role: 'patient',

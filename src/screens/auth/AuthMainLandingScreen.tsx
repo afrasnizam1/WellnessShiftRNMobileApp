@@ -117,7 +117,7 @@ export default function AuthMainLandingScreen() {
 
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.brandStage}>
-          <WellnessShiftLogoBadge diameter={140} />
+          <WellnessShiftLogoBadge diameter={200} />
           <View style={styles.titleBlock}>
             <Text style={styles.appName}>Wellness Shift</Text>
             <Text style={styles.tagline}>Your wellness score — with your clinician in the loop</Text>

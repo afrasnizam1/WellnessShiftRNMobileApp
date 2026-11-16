@@ -6,8 +6,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AppScreen from '../../components/common/AppScreen';
-import { AppCard } from '../../components/ui';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { AppCard, ScreenHeader } from '../../components/ui';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { useAppStore } from '../../store';
 import { Screen } from '../../navigation/screenNames';
 import { socialService, type SocialChallenge, type AccountabilityBoardEntry } from '../../services/socialService';
@@ -114,15 +114,11 @@ export default function SocialFeedScreen() {
   return (
     <AppScreen style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Community Feed</Text>
-          <TouchableOpacity 
-            style={styles.createButton} 
-            onPress={() => setShowCreatePost(!showCreatePost)}
-          >
-            <Ionicons name="add-circle-outline" size={24} color={Colors.primary} />
-          </TouchableOpacity>
-        </View>
+        <ScreenHeader
+          title="Community Feed"
+          onBack={() => navigation.goBack()}
+          actions={[{ icon: 'add-circle-outline', onPress: () => setShowCreatePost(!showCreatePost) }]}
+        />
 
         {showCreatePost && (
           <AppCard style={styles.createPostCard}>
@@ -253,7 +249,7 @@ const styles = StyleSheet.create({
     padding: Spacing.base, 
     paddingTop: Spacing.xl, 
     gap: Spacing.md, 
-    paddingBottom: Spacing['2xl'] 
+    paddingBottom: tabBarScrollPadding 
   },
   header: {
     flexDirection: 'row',

@@ -7,7 +7,7 @@ import { appConfig } from '../config/appConfig';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore } from '../store';
 import { firebaseAuth, userService, wellnessService } from '../services/firebase';
-import { onboardingStorage } from '../services/onboardingStorage';
+import { isFirstRunAccount, onboardingStorage } from '../services/onboardingStorage';
 import { contentsquareService } from '../services/contentsquareService';
 import { Colors, navigationTheme } from '../theme';
 import type { RootStackParamList, UserProfile } from '../types';
@@ -30,7 +30,6 @@ import {
   pendingOnboardingStorage,
 } from '../services/pendingOnboardingStorage';
 
-import SplashScreen from '../screens/auth/SplashScreen';
 import BreathWelcomeScreen from '../screens/auth/BreathWelcomeScreen';
 import ExperienceLevelScreen from '../screens/auth/ExperienceLevelScreen';
 import OnboardingHabitsScreen from '../screens/auth/OnboardingHabitsScreen';
@@ -54,6 +53,7 @@ import { notificationService, setupNotificationNavigation } from '../services/no
 import { subscriptionService } from '../services/subscriptionService';
 import { freeTrialService } from '../services/freeTrialService';
 import { crashlyticsService } from '../services/crashlyticsService';
+import { firebaseAnalytics } from '../services/firebaseAnalytics';
 import { navigationRef, navigateFromNotification } from './navigationRef';
 import { screenviewFromNavigationState } from './screenTracking';
 import { enterDemoSession, isDemoModeActive, isDemoProfile, shouldSkipToApp } from '../services/demoSession';
@@ -318,8 +318,8 @@ export default function RootNavigator() {
     });
   }, []);
 
-  // Physical device / signed-in: show launch breathe+welcome once per account
-  // (again after signup even if they already watched it as a guest).
+  // Breathe + welcome only for a brand-new account still in first-run.
+  // Signing in to an existing account skips it, even if this install never stored the flag.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -330,7 +330,12 @@ export default function RootNavigator() {
       if (!cancelled) setLaunchWelcomeGate('loading');
       try {
         const seen = await onboardingStorage.hasSeenWelcomeVideo(user.uid);
-        if (!cancelled) setLaunchWelcomeGate(seen ? 'done' : 'needed');
+        const showWelcome =
+          !seen && !user.onboardingComplete && isFirstRunAccount(user.createdAt);
+        if (!showWelcome && !seen) {
+          await onboardingStorage.markWelcomeVideoSeen(user.uid);
+        }
+        if (!cancelled) setLaunchWelcomeGate(showWelcome ? 'needed' : 'done');
       } catch {
         if (!cancelled) setLaunchWelcomeGate('done');
       }
@@ -338,7 +343,7 @@ export default function RootNavigator() {
     return () => {
       cancelled = true;
     };
-  }, [user?.uid, user?.role]);
+  }, [user?.uid, user?.role, user?.onboardingComplete, user?.createdAt]);
 
   useEffect(() => {
     if (user) {
@@ -367,6 +372,9 @@ export default function RootNavigator() {
     contentsquareService.syncAnalyticsForUser(user, isAuthLoading).catch((error) => {
       console.warn('[CSQ] syncAnalyticsForUser failed:', error);
     });
+    if (appConfig.isFirebaseConfigured) {
+      firebaseAnalytics.setUser(user?.uid ?? null, { role: user?.role }).catch(() => {});
+    }
   }, [user?.uid, user?.role, isAuthLoading]);
 
   useEffect(() => {
@@ -451,6 +459,14 @@ export default function RootNavigator() {
 
               clearDeferredSimulatorSession();
               setUser(profile);
+              if (profile.quizAnswers && Object.keys(profile.quizAnswers).length > 0) {
+                setLastQuizAnswers(profile.quizAnswers);
+              } else {
+                const storedAnswers = await onboardingStorage.getQuizAnswers(profile.uid);
+                if (storedAnswers && Object.keys(storedAnswers).length > 0) {
+                  setLastQuizAnswers(storedAnswers);
+                }
+              }
 
               if (profile.role === 'clinician') {
                 // Clear the loading gate before optional score fetch so SignUp /
@@ -493,12 +509,17 @@ export default function RootNavigator() {
             if (hadFirebaseSession) {
               freezePreAuthRouteRef.current = false;
               guestNavActiveRef.current = false;
-              resetSession();
+              // Session already cleared by signOutCurrentUser; only reset leftovers
+              // if store still has a user (listener beat the explicit sign-out).
+              if (useAppStore.getState().user) {
+                resetSession();
+              }
               setOnboardingRoute(null);
               setOnboardingRouteReady(false);
               setClinicianGateReady(false);
             }
             resolvePreAuthRoute(introSeen).then(setPreAuthRoute);
+            setAuthLoading(false);
           }
         } catch (error) {
           console.error('Auth state change error:', error);
@@ -681,6 +702,7 @@ export default function RootNavigator() {
     if (!next || next === lastCsqScreenviewRef.current) return;
     lastCsqScreenviewRef.current = next;
     contentsquareService.trackNavigationScreenview(next);
+    firebaseAnalytics.logScreenView(next).catch(() => {});
   };
 
   return (
@@ -706,7 +728,6 @@ export default function RootNavigator() {
             <Stack.Screen name={Screen.introVideo} component={IntroVideoScreen} />
             <Stack.Screen name={Screen.breathWelcome} component={BreathWelcomeScreen} />
             <Stack.Screen name={Screen.authentication} component={AuthNavigator} />
-            <Stack.Screen name={Screen.welcome} component={SplashScreen} />
             <Stack.Screen name={Screen.purposeSelection} component={PurposeSelectionScreen} />
             <Stack.Screen name={Screen.goalSelection} component={GoalSelectionScreen} />
             <Stack.Screen name={Screen.experienceLevel} component={ExperienceLevelScreen} />

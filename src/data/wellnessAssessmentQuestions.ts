@@ -481,7 +481,7 @@ function questionsForIndex(index: 0 | 1): AssessmentQuestion[] {
 /** First-session quiz: 1 question per category (10 total). */
 export const ONBOARDING_ASSESSMENT_QUESTIONS = questionsForIndex(0);
 
-/** Retake / deeper check-in: the second question per category (10 total). */
+/** Optional post-onboarding 10: second question per category. Merges with the first 10. */
 export const DEEPER_CHECKIN_QUESTIONS = questionsForIndex(1);
 
 export type AssessmentQuestionSet = 'onboarding' | 'deeper' | 'full';

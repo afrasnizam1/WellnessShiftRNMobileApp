@@ -65,7 +65,7 @@ function buildTourSteps(primaryGoal?: string | null): TourStep[] {
       description:
         focus === 'fitness'
           ? 'Log how you feel each day, then follow your daily plan. Based on your goals, Fitness Hub is a great next stop after this.'
-          : 'Log today’s mood in one tap — it personalises your plan and AI insights. Your daily plan lives on Home too.',
+          : 'Log today’s mood in one tap — it personalises your plan and Wellness Coach guidance. Your daily plan lives on Home too.',
       icon: focus === 'fitness' ? 'barbell' : 'flame',
       color: focus === 'fitness' ? Colors.fitness : Colors.warning,
       well: focus === 'fitness' ? ['#389EFA', '#007AFF'] : ['#FF9500', '#FFB340'],
@@ -99,15 +99,15 @@ function buildTourSteps(primaryGoal?: string | null): TourStep[] {
     },
     {
       id: 'insights',
-      title: 'AI Insights',
+      title: 'Wellness Coach',
       description:
-        'Chat with your AI health coach, review insights, and get next-best actions based on your quiz and check-ins.',
+        'Chat with Wellness Coach for rule-based lifestyle guidance, and review next-best actions based on your quiz and check-ins.',
       icon: 'sparkles',
       color: Colors.brand,
       well: [...Gradients.brand],
-      tabHint: 'Bottom tab · AI Insights',
+      tabHint: 'Bottom tab · Coach',
       destination: 'aiInsights',
-      actionTitle: 'Open AI Insights',
+      actionTitle: 'Open Wellness Coach',
     },
     {
       id: 'analytics',
@@ -125,7 +125,7 @@ function buildTourSteps(primaryGoal?: string | null): TourStep[] {
       id: 'clinician',
       title: 'Connect with a clinician',
       description:
-        `Get personalised care plans and recommendations from a doctor or GP-referred clinician on Wellness Shift. ${CLINICIAN_CONNECT_SHORT}.`,
+        `Connect with a doctor, clinician, neurosurgeon, physiotherapist, or physical therapist. ${CLINICIAN_CONNECT_SHORT}`,
       icon: 'medkit',
       color: Colors.brand,
       well: ['#F24D80', '#FF8561'],

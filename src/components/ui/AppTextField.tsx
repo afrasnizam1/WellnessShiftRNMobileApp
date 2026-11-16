@@ -8,6 +8,8 @@ import {
   Pressable,
   Platform,
   type TextInputProps,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
@@ -18,6 +20,9 @@ type Props = TextInputProps & {
   hint?: string;
   leftIcon?: keyof typeof Ionicons.glyphMap;
   secureToggle?: boolean;
+  containerStyle?: StyleProp<ViewStyle>;
+  fieldStyle?: StyleProp<ViewStyle>;
+  fieldRef?: React.Ref<TextInput>;
 };
 
 export default function AppTextField({
@@ -28,6 +33,9 @@ export default function AppTextField({
   secureToggle,
   secureTextEntry,
   style,
+  containerStyle,
+  fieldStyle,
+  fieldRef,
   onFocus,
   onBlur,
   editable = true,
@@ -44,7 +52,7 @@ export default function AppTextField({
   };
 
   return (
-    <View style={styles.wrap} pointerEvents="box-none">
+    <View style={[styles.wrap, containerStyle]} pointerEvents="box-none">
       {label ? <Text style={styles.label}>{label}</Text> : null}
       <Pressable
         onPress={focusInput}
@@ -52,6 +60,7 @@ export default function AppTextField({
           styles.field,
           focused && styles.fieldFocused,
           error ? styles.fieldError : null,
+          fieldStyle,
         ]}
         accessibilityRole="none"
       >
@@ -59,7 +68,11 @@ export default function AppTextField({
           <Ionicons name={leftIcon} size={18} color={focused ? Colors.primary : Colors.textTertiary} />
         ) : null}
         <TextInput
-          ref={inputRef}
+          ref={(node) => {
+            inputRef.current = node;
+            if (typeof fieldRef === 'function') fieldRef(node);
+            else if (fieldRef) fieldRef.current = node;
+          }}
           {...rest}
           editable={editable}
           style={[styles.input, style]}
@@ -112,7 +125,8 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: Colors.border,
     paddingHorizontal: Spacing.base,
-    paddingVertical: Platform.OS === 'ios' ? 13 : 12,
+    paddingVertical: Platform.OS === 'ios' ? 14 : 12,
+    minHeight: 52,
     ...Shadow.sm,
   },
   fieldFocused: {
@@ -130,7 +144,7 @@ const styles = StyleSheet.create({
     color: Colors.text,
     padding: 0,
     margin: 0,
-    minHeight: Platform.OS === 'ios' ? 22 : 24,
+    minHeight: Platform.OS === 'ios' ? 24 : 28,
   },
   error: { fontSize: Typography.size.xs, color: Colors.error, fontWeight: '500' },
   hint: { fontSize: Typography.size.xs, color: Colors.textTertiary },

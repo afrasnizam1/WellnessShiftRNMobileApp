@@ -14,6 +14,7 @@ const KEYS = {
   hasSeenOnboardingPaywall: 'hasSeenOnboardingPaywall',
   hasCompletedFirstWin: 'hasCompletedFirstWin',
   pendingInAppGuide: 'pendingInAppGuide',
+  replayAppTour: 'replayAppTour',
   hasCompletedAppTour: 'hasCompletedAppTour',
   hasCompletedStartHere: 'hasCompletedStartHereOnboarding',
   startHereDate: 'startHereOnboardingDate',
@@ -30,6 +31,14 @@ const KEYS = {
 
 function userKey(base: string, uid: string) {
   return `${base}_${uid}`;
+}
+
+/** Post-signup breathe + quick tour. Later sign-ins skip both. */
+const FIRST_RUN_MS = 12 * 60 * 60 * 1000;
+
+export function isFirstRunAccount(createdAt?: string | null, windowMs = FIRST_RUN_MS): boolean {
+  const created = Date.parse(createdAt ?? '');
+  return Number.isFinite(created) && Date.now() - created < windowMs;
 }
 
 export const onboardingStorage = {
@@ -137,13 +146,33 @@ export const onboardingStorage = {
   hasCompletedAppTour: async (uid: string) =>
     (await AsyncStorage.getItem(userKey(KEYS.hasCompletedAppTour, uid))) === 'true',
 
-  /** True when post-paywall / More menu requested the first-run app tour. */
-  shouldShowAppTour: async (uid: string) =>
-    (await AsyncStorage.getItem(userKey(KEYS.pendingInAppGuide, uid))) === 'true',
+  /** More → Quick Start guide. Shows even after the first-run window. */
+  requestAppTourReplay: async (uid: string) =>
+    AsyncStorage.setItem(userKey(KEYS.replayAppTour, uid), 'true'),
+
+  hasAppTourReplay: async (uid: string) =>
+    (await AsyncStorage.getItem(userKey(KEYS.replayAppTour, uid))) === 'true',
+
+  /**
+   * First-run tour, or an explicit replay from More.
+   * A later sign-in clears a leftover pending flag so the tour does not return.
+   */
+  shouldShowAppTour: async (uid: string, createdAt?: string | null) => {
+    const replay = (await AsyncStorage.getItem(userKey(KEYS.replayAppTour, uid))) === 'true';
+    if (replay) return true;
+    const pending = (await AsyncStorage.getItem(userKey(KEYS.pendingInAppGuide, uid))) === 'true';
+    if (!pending) return false;
+    if (!isFirstRunAccount(createdAt)) {
+      await onboardingStorage.markInAppGuideComplete(uid);
+      return false;
+    }
+    return true;
+  },
 
   markInAppGuideComplete: async (uid: string) =>
     Promise.all([
       AsyncStorage.setItem(userKey(KEYS.pendingInAppGuide, uid), 'false'),
+      AsyncStorage.setItem(userKey(KEYS.replayAppTour, uid), 'false'),
       AsyncStorage.setItem(userKey(KEYS.hasCompletedAppTour, uid), 'true'),
     ]),
 
@@ -233,4 +262,24 @@ export const onboardingStorage = {
     await AsyncStorage.setItem(userKey(KEYS.trialStartDate, uid), start);
     return start;
   },
+
+  saveQuizAnswers: async (uid: string, answers: Record<string, number>) =>
+    AsyncStorage.setItem(userKey('quizAnswers', uid), JSON.stringify(answers)),
+
+  getQuizAnswers: async (uid: string): Promise<Record<string, number> | null> => {
+    const raw = await AsyncStorage.getItem(userKey('quizAnswers', uid));
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw) as Record<string, number>;
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch {
+      return null;
+    }
+  },
+
+  markDeeperCheckInComplete: async (uid: string) =>
+    AsyncStorage.setItem(userKey('deeperCheckInComplete', uid), 'true'),
+
+  hasDeeperCheckInComplete: async (uid: string) =>
+    (await AsyncStorage.getItem(userKey('deeperCheckInComplete', uid))) === 'true',
 };

@@ -6,8 +6,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AppScreen from '../../components/common/AppScreen';
-import { AppCard } from '../../components/ui';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { AppCard, ScreenHeader } from '../../components/ui';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { Screen } from '../../navigation/screenNames';
 import { HEALTH_CONDITIONS, CONDITION_CATEGORIES, type HealthCondition } from '../../data/healthConditions';
 
@@ -97,10 +97,11 @@ export default function ConditionHubScreen() {
   return (
     <AppScreen style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Health Conditions</Text>
-          <Text style={styles.subtitle}>Comprehensive information about common health conditions</Text>
-        </View>
+        <ScreenHeader
+          title="Health Conditions"
+          subtitle="Comprehensive information about common health conditions"
+          onBack={() => navigation.goBack()}
+        />
 
         <View style={styles.searchSection}>
           <View style={styles.searchBar}>
@@ -214,7 +215,7 @@ const styles = StyleSheet.create({
     padding: Spacing.base, 
     paddingTop: Spacing.xl, 
     gap: Spacing.md, 
-    paddingBottom: Spacing['2xl'] 
+    paddingBottom: tabBarScrollPadding 
   },
   header: {
     alignItems: 'center',

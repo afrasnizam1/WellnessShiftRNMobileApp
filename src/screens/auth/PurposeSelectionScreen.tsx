@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, Pressable } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
 import type { IoniconName } from '../../theme/icons';
-import { AppCard, AnimatedPressable, BrandButton, IconBadge } from '../../components/ui';
+import { AnimatedPressable, BrandButton, IconBadge } from '../../components/ui';
 import AppScreen from '../../components/common/AppScreen';
 import { useAppStore } from '../../store';
 import { userService, wellnessService } from '../../services/firebase';
@@ -18,10 +18,10 @@ import { resolvePostAuthOnboardingRoute } from '../../services/onboardingRoutes'
 import { Screen } from '../../navigation/screenNames';
 import {
   APP_PURPOSE_OPTIONS,
-  CLINICIAN_CONNECT_ELIGIBILITY,
   resolveLeadPurpose,
   type AppPurpose,
 } from '../../types/onboardingPrefs';
+import { analyticsHelper } from '../../services/analyticsHelper';
 
 const PURPOSE_COLORS: Record<AppPurpose, string> = {
   wellness_score: Colors.purple,
@@ -64,6 +64,8 @@ export default function PurposeSelectionScreen() {
 
     setSaving(true);
     try {
+      analyticsHelper.trackPurposeSelected(purposes);
+      analyticsHelper.trackOnboardingStep('purpose_selection');
       if (user) {
         await userService.updateProfile(user.uid, {
           appPurpose: primary,
@@ -121,9 +123,10 @@ export default function PurposeSelectionScreen() {
         <Text style={styles.eyebrow}>Start here</Text>
         <Text style={styles.title}>Why are you here?</Text>
         <Text style={styles.subtitle}>
-          Everything in Wellness Shift feeds one wellness score — workouts, nutrition,
-          sleep, and mood. Clinician linking is only if your GP referred you for a health
-          issue. Pick all that apply.
+          Pick all that apply. Workouts, nutrition, sleep, and mood all feed one wellness score.
+        </Text>
+        <Text style={styles.clinicianHint}>
+          You can link a doctor or therapist later in My Care with their invite code.
         </Text>
 
         <View style={styles.list}>
@@ -131,67 +134,56 @@ export default function PurposeSelectionScreen() {
             const isSelected = selected.has(option.id);
             const color = PURPOSE_COLORS[option.id];
             return (
-              <AnimatedPressable
+              <Pressable
                 key={option.id}
                 onPress={() => togglePurpose(option.id)}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: isSelected }}
                 accessibilityLabel={option.title}
+                android_ripple={{ color: `${color}22` }}
+                style={({ pressed }) => [
+                  styles.card,
+                  isSelected && {
+                    borderColor: color,
+                    backgroundColor: Colors.surface,
+                  },
+                  pressed && styles.cardPressed,
+                ]}
               >
-                <AppCard
-                  style={[
-                    styles.card,
-                    isSelected && {
-                      borderColor: color,
-                      backgroundColor: `${color}12`,
-                    },
-                  ]}
-                >
-                  <IconBadge
-                    name={option.icon as IoniconName}
-                    color={color}
-                    size="md"
-                    variant={isSelected ? 'solid' : 'soft'}
-                  />
-                  <View style={styles.cardText}>
-                    <Text style={styles.cardTitle}>{option.title}</Text>
-                    <Text style={styles.cardSub}>{option.subtitle}</Text>
+                <IconBadge
+                  name={option.icon as IoniconName}
+                  color={color}
+                  size="md"
+                  variant={isSelected ? 'solid' : 'soft'}
+                />
+                <View style={styles.cardText}>
+                  <Text style={styles.cardTitle}>{option.title}</Text>
+                  <Text style={styles.cardSub}>{option.subtitle}</Text>
+                </View>
+                {isSelected ? (
+                  <View style={[styles.check, { backgroundColor: color }]}>
+                    <Ionicons name="checkmark" size={14} color={Colors.white} />
                   </View>
-                  {isSelected ? (
-                    <View style={[styles.check, { backgroundColor: color }]}>
-                      <Ionicons name="checkmark" size={14} color={Colors.white} />
-                    </View>
-                  ) : (
-                    <View style={styles.checkEmpty} />
-                  )}
-                </AppCard>
-              </AnimatedPressable>
+                ) : (
+                  <View style={styles.checkEmpty} />
+                )}
+              </Pressable>
             );
           })}
         </View>
 
-        {(selected.has('clinician') || selected.has('all')) && (
-          <View style={styles.clinicianNotice} accessibilityRole="text">
-            <Text style={styles.clinicianNoticeTitle}>Clinician linking — important</Text>
-            <Text style={styles.clinicianNoticeBody}>{CLINICIAN_CONNECT_ELIGIBILITY}</Text>
-          </View>
-        )}
       </ScrollView>
 
       <View style={styles.footer}>
-        <Text style={styles.selectionHint}>
-          {selectionCount === 0
-            ? 'Select at least one'
-            : `${selectionCount} selected`}
-        </Text>
         <BrandButton
           label="Next"
           onPress={handleContinue}
           disabled={selectionCount === 0}
           loading={saving}
+          compact
         />
         {!user ? (
-          <>
+          <View style={styles.signInRow}>
             <AnimatedPressable
               onPress={() =>
                 navigation.navigate(Screen.authentication, {
@@ -200,10 +192,11 @@ export default function PurposeSelectionScreen() {
                 })
               }
               accessibilityRole="button"
-              accessibilityLabel="I'm here for my wellness — Sign in"
+              accessibilityLabel="Sign in for wellness"
             >
-              <Text style={styles.signInLink}>I'm here for my wellness — Sign in</Text>
+              <Text style={styles.signInLink}>Sign in</Text>
             </AnimatedPressable>
+            <Text style={styles.signInDot}>·</Text>
             <AnimatedPressable
               onPress={() =>
                 navigation.navigate(Screen.authentication, {
@@ -214,9 +207,9 @@ export default function PurposeSelectionScreen() {
               accessibilityRole="button"
               accessibilityLabel="Clinician sign in"
             >
-              <Text style={styles.signInLink}>I'm a clinician — Sign in</Text>
+              <Text style={styles.signInLink}>Clinician sign in</Text>
             </AnimatedPressable>
-          </>
+          </View>
         ) : null}
       </View>
     </AppScreen>
@@ -227,9 +220,9 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   content: {
     padding: Spacing.base,
-    paddingTop: Spacing.xl,
+    paddingTop: Spacing.lg,
     paddingBottom: Spacing.md,
-    gap: Spacing.md,
+    gap: Spacing.sm,
   },
   eyebrow: {
     fontSize: Typography.size.xs,
@@ -247,33 +240,20 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: Typography.size.base,
+    fontSize: Typography.size.sm,
     color: Colors.textSecondary,
     textAlign: 'center',
-    marginTop: Spacing.xs,
-    lineHeight: 22,
+    lineHeight: 18,
     paddingHorizontal: Spacing.sm,
   },
-  list: { gap: Spacing.sm, marginTop: Spacing.lg },
-  clinicianNotice: {
-    marginTop: Spacing.sm,
-    backgroundColor: Colors.brandSubtle,
-    borderRadius: Radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Colors.brandMuted,
-    padding: Spacing.base,
-    gap: Spacing.xs,
+  clinicianHint: {
+    fontSize: Typography.size.xs,
+    color: Colors.textTertiary,
+    textAlign: 'center',
+    lineHeight: 16,
+    paddingHorizontal: Spacing.md,
   },
-  clinicianNoticeTitle: {
-    fontSize: Typography.size.sm,
-    fontWeight: '800',
-    color: Colors.brandDark,
-  },
-  clinicianNoticeBody: {
-    fontSize: Typography.size.sm,
-    color: Colors.textSecondary,
-    lineHeight: 20,
-  },
+  list: { gap: Spacing.sm, marginTop: Spacing.xs },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -283,8 +263,13 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: Colors.borderLight,
     borderRadius: Radius.xl,
+    backgroundColor: Colors.surface,
+    ...Shadow.sm,
   },
-  cardText: { flex: 1, gap: 4 },
+  cardPressed: {
+    opacity: 0.92,
+  },
+  cardText: { flex: 1, gap: 4, backgroundColor: 'transparent' },
   cardTitle: {
     fontSize: Typography.size.base,
     fontWeight: '700',
@@ -309,19 +294,26 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1.5,
     borderColor: Colors.border,
+    backgroundColor: 'transparent',
   },
   footer: {
-    padding: Spacing.base,
-    paddingBottom: Spacing.xl,
-    gap: Spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: Colors.borderLight,
+    paddingHorizontal: Spacing.base,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.md,
+    gap: Spacing.xs,
     backgroundColor: Colors.background,
   },
-  selectionHint: {
+  signInRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingTop: 2,
+  },
+  signInDot: {
     fontSize: Typography.size.sm,
-    color: Colors.textSecondary,
-    textAlign: 'center',
+    color: Colors.textTertiary,
     fontWeight: '600',
   },
   signInLink: {
@@ -329,6 +321,6 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     textAlign: 'center',
     fontWeight: '700',
-    paddingVertical: Spacing.xs,
+    paddingVertical: 2,
   },
 });

@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import {
   AppCard, ListRow, ScreenHeader, BrandButton, SectionHeader, IconBadge,
 } from '../../components/ui';
@@ -17,6 +17,7 @@ import { markCarePlanSeen, syncUnseenCarePlan } from '../../services/carePlanUns
 import type { ConnectionRequest } from '../../types';
 import AppScreen from '../../components/common/AppScreen';
 import { CLINICIAN_CONNECT_ELIGIBILITY, CLINICIAN_CONNECT_SHORT } from '../../types/onboardingPrefs';
+import { appConfig } from '../../config/appConfig';
 
 type LinkedClinicianDetails = {
   clinicianId: string;
@@ -266,7 +267,7 @@ export default function MyCareHubScreen() {
         subtitle={
           connected
             ? 'Care plans, messaging & guidance'
-            : 'GP-referred clinician link only'
+            : 'Connect with a doctor or therapist'
         }
         onBack={navigation.canGoBack() ? () => navigation.goBack() : undefined}
         large={false}
@@ -318,14 +319,16 @@ export default function MyCareHubScreen() {
             iconBg={Colors.fitness + '22'}
             onPress={() => navigation.navigate(Screen.programs)}
           />
-          <ListRow
-            title="Coaching & consultations"
-            subtitle="Book 1-on-1 sessions"
-            icon={<Ionicons name="people-outline" size={22} color="#946BFA" />}
-            iconBg="rgba(148, 107, 250, 0.15)"
-            onPress={() => navigation.navigate(Screen.coaching)}
-            showDivider={!!connected}
-          />
+          {appConfig.enableCoachingBookings && (
+            <ListRow
+              title="Coaching & consultations"
+              subtitle="Book 1-on-1 sessions"
+              icon={<Ionicons name="people-outline" size={22} color="#946BFA" />}
+              iconBg="rgba(148, 107, 250, 0.15)"
+              onPress={() => navigation.navigate(Screen.coaching)}
+              showDivider={!!connected}
+            />
+          )}
           {connected && (
             <ListRow
               title="Disconnect clinician"
@@ -362,7 +365,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   content: {
     paddingHorizontal: Spacing.base,
-    paddingBottom: Spacing.xl,
+    paddingBottom: tabBarScrollPadding,
     gap: Spacing.md,
   },
   loadingCard: {

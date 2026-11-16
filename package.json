@@ -15,7 +15,7 @@
     "functions:deploy": "firebase deploy --only functions",
     "deploy:backend": "firebase deploy --only firestore,functions",
     "deploy:rules": "firebase deploy --only firestore:rules --project wellnessshift-rn-ios",
-    "deploy:hosting": "firebase deploy --only hosting --project wellnessshift-rn-ios",
+    "deploy:hosting": "bash scripts/deploy-hosting.sh wellnessshift-rn-ios",
     "generate:icons": "python3 scripts/generate-app-icons.py",
     "bundle:hologram": "npx esbuild src/hologram/androidHologramViewer.ts --bundle --format=iife --platform=browser --outfile=android/app/src/main/assets/hologram/viewer.js --minify"
   },
@@ -30,6 +30,7 @@
     "@react-native-firebase/auth": "^25.1.0",
     "@react-native-firebase/crashlytics": "^25.1.0",
     "@react-native-firebase/firestore": "^25.1.0",
+    "@react-native-firebase/functions": "^25.1.0",
     "@react-native-firebase/messaging": "^25.1.0",
     "@react-native-firebase/remote-config": "^25.1.0",
     "@react-native-google-signin/google-signin": "^11.0.1",

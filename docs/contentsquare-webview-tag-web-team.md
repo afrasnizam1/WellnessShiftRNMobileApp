@@ -1,6 +1,6 @@
 # ContentSquare WebView tag — implementation guide for web team
 
-**Audience:** Web platform team (wellnessshift.co.uk)  
+**Audience:** Web platform team (wellnesshift.co.uk)  
 **Mobile app:** WellnessShift React Native (iOS + Android)  
 **Purpose:** Route in-app WebView interactions into the **mobile Apps** session replay, without breaking normal browser tracking.
 
@@ -8,7 +8,7 @@
 
 ## Context
 
-The mobile app loads `https://wellnessshift.co.uk` inside an in-app WebView wrapped with ContentSquare’s `CSQWebView` component. That registers the WebView with the **native SDK** and injects a JavaScript bridge.
+The mobile app loads `https://wellnesshift.co.uk` inside an in-app WebView wrapped with ContentSquare’s `CSQWebView` component. That registers the WebView with the **native SDK** and injects a JavaScript bridge.
 
 **`CSQWebView` alone is not enough.** The website must load the ContentSquare tag in **WebView mode** so clicks, pageviews, and replay data are forwarded to the native SDK instead of (or in addition to) a standalone browser session.
 
@@ -22,7 +22,7 @@ References:
 
 | ID | Owner | Used for | Example / placeholder |
 |----|--------|----------|------------------------|
-| **Web tag ID** | Web team (existing) | Normal browser traffic on wellnessshift.co.uk | `4ca4c4362b680` (web project **743584**) |
+| **Web tag ID** | Web team (existing) | Normal browser traffic on wellnesshift.co.uk | `4ca4c4362b680` (web project **743584**) |
 | **WebView tag ID** | ContentSquare + mobile | Pages loaded inside the WellnessShift app WebView | `2095fc2d6ccd8` (Apps-linked, project **745996**) |
 | **Apps environment ID** | Mobile team | Native SDK only — **not inserted in the web tag** | `2039001180` |
 
@@ -172,7 +172,7 @@ function csqWebViewPageview() {
 // when isInAppWebView() is true
 ```
 
-Coordinate with mobile on whether wellnessshift.co.uk is MPA or SPA.
+Coordinate with mobile on whether wellnesshift.co.uk is MPA or SPA.
 
 ---
 
@@ -200,7 +200,7 @@ Coordinate with mobile on whether wellnessshift.co.uk is MPA or SPA.
 ### 4. What success looks like in native logs (iOS example)
 
 ```
-[WebView] Registering WebView on native side for page: https://wellnessshift.co.uk/ ...
+[WebView] Registering WebView on native side for page: https://wellnesshift.co.uk/ ...
 [WebView] CSJavascriptBridge is detected on page: ...
 [WebView JS log] (TAG_CONFIGURATION) ...
 Screenview - Screen name: "..." ...
@@ -233,7 +233,7 @@ WebView personal data masking is handled on the **web** side per ContentSquare w
 
 Hi team,
 
-We’ve integrated ContentSquare on the WellnessShift mobile app and load wellnessshift.co.uk in an in-app WebView using `CSQWebView`. To get web interactions into our **mobile session replay**, we need a small change on the web tag side.
+We’ve integrated ContentSquare on the WellnessShift mobile app and load wellnesshift.co.uk in an in-app WebView using `CSQWebView`. To get web interactions into our **mobile session replay**, we need a small change on the web tag side.
 
 **What we need from ContentSquare (if not done yet):** a WebView tag ID linked to our Apps project environment **2039001180** (separate from our existing browser web tag).
 

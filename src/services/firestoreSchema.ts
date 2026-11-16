@@ -446,6 +446,6 @@ export function buildCustomCarePlanNativeFields(planId: string): {
   qrCodeData: string;
   shareableLink: string;
 } {
-  const shareableLink = `https://wellnessshift.co.uk/care-plan/${planId}`;
+  const shareableLink = `https://wellnesshift.co.uk/care-plan/${planId}`;
   return { qrCodeData: shareableLink, shareableLink };
 }

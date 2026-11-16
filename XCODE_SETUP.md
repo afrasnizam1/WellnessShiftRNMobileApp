@@ -122,7 +122,7 @@ Select your target → **Signing & Capabilities** → click **+** and add:
 | **Push Notifications** | Required for FCM |
 | **In-App Purchase** | For StoreKit subscriptions |
 | **Sign In with Apple** | For Apple auth |
-| **Associated Domains** | Add `applinks:wellnessshift.co.uk` |
+| **Associated Domains** | Add `applinks:wellnesshift.co.uk` |
 | **App Attest** | For Firebase App Check |
 
 ---
@@ -341,4 +341,4 @@ And in `package.json`, add `@contentsquare/react-native` when available.
 
 ---
 
-*Setup complete. For support: support@wellnessshift.co.uk*
+*Setup complete. For support: support@wellnesshift.co.uk*

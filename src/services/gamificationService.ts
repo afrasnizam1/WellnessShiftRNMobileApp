@@ -10,7 +10,7 @@ export const ACHIEVEMENT_DEFINITIONS: AchievementDefinition[] = [
   { id: 'streak_7', icon: '🔥', title: '7-Day Streak', description: 'Check in 7 days in a row' },
   { id: 'mind_matters', icon: '🧠', title: 'Mind Matters', description: 'Complete 10 mindfulness sessions' },
   { id: 'fitness_fanatic', icon: '💪', title: 'Fitness Fanatic', description: 'Log 20 workouts or gym visits' },
-  { id: 'ai_explorer', icon: '🤖', title: 'AI Explorer', description: 'Have 50 AI coach conversations' },
+  { id: 'ai_explorer', icon: '🤖', title: 'Coach Explorer', description: 'Have 50 Wellness Coach conversations' },
   { id: 'score_climber', icon: '📊', title: 'Score Climber', description: 'Improve your wellness score by 2 points' },
   { id: 'care_connected', icon: '🩺', title: 'Care Connected', description: 'Link with a clinician' },
   { id: 'wellness_champion', icon: '🏆', title: 'Wellness Champion', description: 'Achieve a score of 8.0 or above' },

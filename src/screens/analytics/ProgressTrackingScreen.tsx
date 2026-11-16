@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LineChart, BarChart } from 'react-native-gifted-charts';
-import { Colors, Typography, Spacing, Radius, WELLNESS_CATEGORIES } from '../../theme';
+import { Colors, Typography, Spacing, Radius, WELLNESS_CATEGORIES, tabBarScrollPadding } from '../../theme';
 import { ScreenHeader, SegmentedControl, AnimatedPressable, CategoryIcon } from '../../components/ui';
 import {
   BarChartTooltip,
@@ -451,7 +451,7 @@ function formatDateLabel(iso: string, period: Period): string {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   header: { paddingHorizontal: Spacing.base, gap: Spacing.md, paddingBottom: Spacing.sm },
-  content: { padding: Spacing.base, gap: Spacing.md },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
 
   demoBanner: {
     backgroundColor: Colors.info + '18',

@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { AppCard } from '../../components/ui';
 import { VITAMIN_SCENARIOS, VITAMINS_A_TO_Z, type VitaminDetail, type VitaminScenario } from '../../data/vitaminsLearningData';
 import AppScreen from '../../components/common/AppScreen';
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   backText: { fontSize: 32, color: Colors.primary, fontWeight: '300', marginTop: -4 },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: Typography.size.base, fontWeight: '700', color: Colors.text },
-  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: Spacing['3xl'] },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   hero: { height: 180, borderRadius: Radius.lg, overflow: 'hidden', justifyContent: 'flex-end', padding: Spacing.base },
   heroImage: { borderRadius: Radius.lg },
   heroTitle: { fontSize: Typography.size.xl, fontWeight: '800', color: Colors.white },

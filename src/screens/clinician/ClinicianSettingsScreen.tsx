@@ -59,9 +59,13 @@ export default function ClinicianSettingsScreen() {
       {
         text: 'Sign Out',
         style: 'destructive',
-        onPress: () => signOutCurrentUser(user).catch(() => {
-          Alert.alert('Sign Out', 'Could not complete sign out. Please try again.');
-        }),
+        onPress: () => {
+          setTimeout(() => {
+            signOutCurrentUser(user).catch(() => {
+              Alert.alert('Sign Out', 'Could not complete sign out. Please try again.');
+            });
+          }, 50);
+        },
       },
     ]);
   };
@@ -78,9 +82,13 @@ export default function ClinicianSettingsScreen() {
 
   return (
     <View style={styles.root}>
-      <ClinicianHeroHeader title="Settings" subtitle="Practice preferences & account" />
+      <ClinicianHeroHeader
+        title="Settings"
+        subtitle="Practice preferences & account"
+        onBack={() => navigation.navigate(Screen.clinicianTabs, { screen: Screen.clinicianDashboard })}
+      />
 
-      <AppScreen style={styles.body}>
+      <AppScreen mesh={false} backgroundColor={ClinicianTheme.canvas} style={styles.body} edges={[]}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.profileCard}>
             <View style={styles.avatar}>
@@ -258,7 +266,7 @@ const styles = StyleSheet.create({
     backgroundColor: ClinicianTheme.accentSoft,
     alignItems: 'center', justifyContent: 'center',
   },
-  content: { paddingTop: Spacing.md, gap: Spacing.lg, paddingHorizontal: Spacing.base },
+  content: { paddingTop: Spacing.sm, gap: Spacing.lg, paddingHorizontal: Spacing.base },
   section: { gap: Spacing.sm },
   sectionTitle: { fontSize: Typography.size.md, fontWeight: '700', color: Colors.text, letterSpacing: -0.3 },
   card: {

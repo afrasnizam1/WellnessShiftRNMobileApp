@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Colors, Typography, Spacing, Radius, Shadow, fitnessModuleIonIcon } from '../../theme';
+import { Colors, Typography, Spacing, Radius, Shadow, fitnessModuleIonIcon, tabBarScrollPadding } from '../../theme';
 import { useAppStore } from '../../store';
 import { clinicianService, formatClinicianConnectedMessage, normalizeInviteCode } from '../../services/clinicianService';
 import { carePlanService } from '../../services/firebase';
@@ -154,8 +154,8 @@ export default function CarePlanScreen() {
             <Text style={styles.emptyEmoji}>🩺</Text>
             <Text style={styles.emptyTitle}>No clinician connected</Text>
             <Text style={styles.emptySub}>
-              Clinician connection is only for patients with a health issue whose GP has referred
-              them. Approve a request below, or enter the invite code your referred clinician gave you.
+              Connect with a doctor, clinician, neurosurgeon, physiotherapist, or physical therapist.
+              Approve a request below, or enter the invite code they gave you.
             </Text>
           </View>
 
@@ -301,7 +301,7 @@ export default function CarePlanScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.base, gap: Spacing.md },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   fromLabel: {
     fontSize: Typography.size.xs,
     fontWeight: '700',

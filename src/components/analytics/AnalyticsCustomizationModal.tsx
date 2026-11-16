@@ -75,7 +75,7 @@ export default function AnalyticsCustomizationModal({ visible, onClose }: Props)
             ['showActivityConsistency', 'Activity Consistency'],
             ['showRecoveryBalance', 'Recovery Balance'],
             ['showCardioLoad', 'Cardio Load'],
-            ['showAIInsights', 'AI Insights'],
+            ['showAIInsights', 'Wellness Coach'],
             ['showGoalsProgress', 'Goals Progress'],
             ['showHabits', 'Habits'],
           ] as const).map(([key, label]) => (

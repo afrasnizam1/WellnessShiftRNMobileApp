@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { AppCard } from '../../components/ui';
 import { getLearningGuide } from '../../data/learningGuides';
 import { getRichLearningGuide } from '../../data/learningGuideContent';
@@ -41,7 +41,7 @@ export default function LearningGuideDetailScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {guide && !heroFailed ? (
           <ImageBackground
-            source={{ uri: guide.imageUrl }}
+            source={guide.image ?? { uri: guide.imageUrl }}
             style={styles.hero}
             imageStyle={styles.heroImage}
             onError={() => setHeroFailed(true)}
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   backText: { fontSize: 32, color: Colors.primary, fontWeight: '300', marginTop: -4 },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: Typography.size.base, fontWeight: '700', color: Colors.text },
-  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: Spacing['3xl'] },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   hero: { height: 180, borderRadius: Radius.lg, overflow: 'hidden', justifyContent: 'flex-end', padding: Spacing.base },
   heroImage: { borderRadius: Radius.lg },
   heroFallback: { height: 160, borderRadius: Radius.lg, justifyContent: 'flex-end', padding: Spacing.base },

@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking } from 'r
 import { useNavigation } from '@react-navigation/native';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
 import AppScreen from '../../components/common/AppScreen';
+import { appConfig } from '../../config/appConfig';
 
 const RESOURCES = [
   { icon: '📋', title: 'Between-visit checklists', body: 'Send patients daily task reminders via care plans so they stay on track between appointments.' },
@@ -35,7 +36,7 @@ export default function ClinicianBetweenVisitsScreen() {
             </View>
           </View>
         ))}
-        <TouchableOpacity style={styles.linkBtn} onPress={() => Linking.openURL('mailto:support@wellnessshift.co.uk')}>
+        <TouchableOpacity style={styles.linkBtn} onPress={() => Linking.openURL(`mailto:${appConfig.supportEmail}`)}>
           <Text style={styles.linkText}>Contact Wellness Shift support</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.linkBtn} onPress={() => navigation.navigate(Screen.clinicianHelp)}>

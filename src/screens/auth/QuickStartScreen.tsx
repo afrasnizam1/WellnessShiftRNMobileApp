@@ -25,7 +25,7 @@ const STEPS = [
   },
   {
     number: 3,
-    title: 'AI Insights',
+    title: 'Wellness Coach',
     description: 'Get your next best action based on your quiz results and progress.',
     icon: '🧠',
   },

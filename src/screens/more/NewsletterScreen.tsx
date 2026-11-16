@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { ScreenHeader } from '../../components/ui';
 import { useAppStore } from '../../store';
 import AppScreen from '../../components/common/AppScreen';
@@ -53,7 +53,7 @@ export default function NewsletterScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.base, gap: Spacing.md },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   body: { fontSize: Typography.size.sm, color: Colors.textSecondary, lineHeight: 22 },
   input: {
     backgroundColor: Colors.surface,

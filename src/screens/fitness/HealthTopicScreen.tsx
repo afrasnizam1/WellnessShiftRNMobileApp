@@ -12,14 +12,14 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { FITNESS_MODULES } from '../../data/fitnessData';
 import { HEALTH_TOPIC_ALIASES } from '../../data/healthTopicContent';
 import { getRichHealthEducation } from '../../data/healthEducationResolver';
 import { AppCard, IconBadge, SectionHeader } from '../../components/ui';
 import AppScreen from '../../components/common/AppScreen';
 import { navigateToFitnessModule } from '../../utils/fitnessModuleRouter';
+import FlexibilityCheck from '../../components/fitness/FlexibilityCheck';
 import type { IoniconName } from '../../theme/icons';
 
 const HERO_HEIGHT = 220;
@@ -36,27 +36,15 @@ function HeroBlock({
   heroImageUrl,
   heroIcon,
   accentColor,
-  topInset,
-  onBack,
 }: {
   title: string;
   subtitle?: string;
   heroImageUrl: string;
   heroIcon: IoniconName;
   accentColor: string;
-  topInset: number;
-  onBack: () => void;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = !imageFailed;
-
-  const topBar = (
-    <View style={[styles.heroTopBar, { paddingTop: topInset + Spacing.xs }]}>
-      <TouchableOpacity onPress={onBack} style={styles.backBtn} accessibilityLabel="Go back">
-        <Ionicons name="chevron-back" size={22} color={Colors.white} />
-      </TouchableOpacity>
-    </View>
-  );
 
   const bottomContent = (
     <View style={styles.heroBottom}>
@@ -83,7 +71,6 @@ function HeroBlock({
           colors={['rgba(15,23,42,0.55)', 'rgba(15,23,42,0.25)', 'rgba(15,23,42,0.82)']}
           style={StyleSheet.absoluteFill}
         />
-        {topBar}
         {bottomContent}
       </ImageBackground>
     );
@@ -91,7 +78,6 @@ function HeroBlock({
 
   return (
     <LinearGradient colors={heroFallbackColors(accentColor)} style={styles.hero}>
-      {topBar}
       {bottomContent}
     </LinearGradient>
   );
@@ -100,7 +86,6 @@ function HeroBlock({
 export default function HealthTopicScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
   const rawTopicId = route.params?.topicId ?? '';
   const topicId = HEALTH_TOPIC_ALIASES[rawTopicId] ?? rawTopicId;
   const module = FITNESS_MODULES.find((m) => m.id === topicId || m.id === rawTopicId);
@@ -121,7 +106,9 @@ export default function HealthTopicScreen() {
 
   return (
     <AppScreen style={styles.safe} mesh={false} backgroundColor="#EEF1F7">
+      <View style={styles.screen}>
       <ScrollView
+        style={styles.scroll}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
@@ -131,11 +118,12 @@ export default function HealthTopicScreen() {
           heroImageUrl={rich.heroImageUrl || DEFAULT_HERO_IMAGE}
           heroIcon={rich.heroIcon}
           accentColor={accentColor}
-          topInset={insets.top}
-          onBack={() => navigation.goBack()}
         />
 
         <View style={styles.contentPanel}>
+          {topicId === 'flexibility-assessment' || rawTopicId === 'flexibility-assessment' ? (
+            <FlexibilityCheck accent={accentColor} />
+          ) : null}
           <AppCard style={styles.blockCard}>
             <Text style={styles.blockLabel}>Overview</Text>
             <Text style={styles.introText}>{rich.intro}</Text>
@@ -226,28 +214,46 @@ export default function HealthTopicScreen() {
           </AppCard>
         </View>
       </ScrollView>
+      <TouchableOpacity
+        onPress={() => navigation.goBack()}
+        style={styles.stickyBack}
+        accessibilityRole="button"
+        accessibilityLabel="Go back"
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Ionicons name="chevron-back" size={22} color={Colors.text} />
+      </TouchableOpacity>
+      </View>
     </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  scrollContent: { paddingBottom: Spacing['3xl'] },
-  hero: {
-    width: '100%',
-    height: HERO_HEIGHT,
-    justifyContent: 'space-between',
-  },
-  heroTopBar: {
-    paddingHorizontal: Spacing.base,
-  },
-  backBtn: {
+  screen: { flex: 1 },
+  scroll: { flex: 1 },
+  stickyBack: {
+    position: 'absolute',
+    top: Spacing.sm,
+    left: Spacing.base,
+    zIndex: 20,
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: Colors.white,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.16,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  scrollContent: { paddingBottom: tabBarScrollPadding },
+  hero: {
+    width: '100%',
+    height: HERO_HEIGHT,
+    justifyContent: 'flex-end',
   },
   heroBottom: {
     paddingHorizontal: Spacing.base,

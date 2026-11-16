@@ -1,5 +1,6 @@
 import { FITNESS_MODULES } from './fitnessData';
 import { HEALTH_TOPIC_ALIASES, resolveHealthTopicContent } from './healthTopicContent';
+import { getDeepHealthEducation } from './healthTopicDeepContent';
 import type { RichHealthEducation, HealthEducationSection } from './healthEducationRichContent';
 import type { FitnessModule } from '../types';
 import type { IoniconName } from '../theme/icons';
@@ -25,6 +26,14 @@ function parseBullets(body: string) {
     .map((line) => line.replace(/^[•-]\s*/, ''));
 }
 
+function cardTitle(text: string, index: number): string {
+  const clean = text.replace(/^[•-]\s*/, '').trim();
+  const head = clean.split(/[:—–]/)[0]?.trim() ?? clean;
+  if (head.length >= 8 && head.length <= 46 && head.length < clean.length) return head;
+  const words = clean.split(/\s+/).slice(0, 5).join(' ').replace(/[.,;:]$/, '');
+  return words || `Idea ${index + 1}`;
+}
+
 function sectionFromPlain(heading: string, body: string): HealthEducationSection {
   const bullets = parseBullets(body);
   const isList = bullets.length > 1 || body.includes('•') || body.includes('\n-');
@@ -34,7 +43,7 @@ function sectionFromPlain(heading: string, body: string): HealthEducationSection
       title: heading,
       cards: bullets.map((text, i) => ({
         icon: 'checkmark-circle-outline' as IoniconName,
-        title: `Point ${i + 1}`,
+        title: cardTitle(text, i),
         body: text,
       })),
     };
@@ -192,6 +201,12 @@ export function buildEnhancedPlainRich(
   const content = resolveHealthTopicContent(resolvedId, title, subtitle);
   const wc = mod?.wellnessCategory ?? 'physical';
   const accent = mod?.color ?? '#389EFA';
+  const icon = CATEGORY_ICONS[wc] ?? 'book-outline';
+  const deep =
+    getDeepHealthEducation(resolvedId, accent, icon)
+    ?? getDeepHealthEducation(topicId, accent, icon)
+    ?? (rawTopicId ? getDeepHealthEducation(rawTopicId, accent, icon) : null);
+  if (deep) return deep;
 
   const plainSections = content.sections.map((s) => sectionFromPlain(s.heading, s.body));
 

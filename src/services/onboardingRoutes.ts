@@ -1,5 +1,5 @@
 import { Screen } from '../navigation/screenNames';
-import { onboardingStorage } from './onboardingStorage';
+import { isFirstRunAccount, onboardingStorage } from './onboardingStorage';
 import {
   pendingCanShowResults,
   pendingJustFinishedQuiz,
@@ -108,7 +108,10 @@ export async function resolvePostAuthOnboardingRoute(
   if (user.role !== 'patient') return 'complete';
 
   if (!(await onboardingStorage.hasSeenWelcomeVideo(user.uid))) {
-    return Screen.introVideo;
+    if (!user.onboardingComplete && isFirstRunAccount(user.createdAt)) {
+      return Screen.introVideo;
+    }
+    await onboardingStorage.markWelcomeVideoSeen(user.uid);
   }
 
   const storedPurpose = await onboardingStorage.getAppPurpose(user.uid);

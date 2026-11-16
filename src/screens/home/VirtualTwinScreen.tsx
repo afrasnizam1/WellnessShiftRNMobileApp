@@ -5,9 +5,10 @@ import { useNavigation } from '@react-navigation/native';
 import AppScreen from '../../components/common/AppScreen';
 import { ScreenHeader, BrandButton } from '../../components/ui';
 import HologramViewer from '../../components/fitness/HologramViewer';
-import { Colors, Typography, Spacing, Radius, TabBarMetrics } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { useAppStore } from '../../store';
 import { computeBiologicalAge } from '../../utils/biologicalAge';
+import { isDeeperCheckInComplete } from '../../utils/wellnessAssessmentScoring';
 import { ANATOMY_MODELS } from '../../data/anatomyModels';
 import { Screen } from '../../navigation/screenNames';
 import { navigationRef } from '../../navigation/navigationRef';
@@ -99,6 +100,7 @@ export default function VirtualTwinScreen() {
   const navigation = useNavigation<any>();
   const user = useAppStore((s) => s.user);
   const wellnessScore = useAppStore((s) => s.wellnessScore);
+  const lastQuizAnswers = useAppStore((s) => s.lastQuizAnswers);
   const model = ANATOMY_MODELS['anatomy-study'];
 
   const result = useMemo(() => {
@@ -171,9 +173,14 @@ export default function VirtualTwinScreen() {
     ];
   }, [cats, inflammation, metabolic, overall]);
 
+  const needsDeeperCheckIn =
+    !!user?.onboardingComplete &&
+    !user?.deeperCheckInComplete &&
+    !isDeeperCheckInComplete(lastQuizAnswers);
+
   const openQuiz = () => {
     if (navigationRef.isReady()) {
-      navigationRef.navigate(Screen.wellnessQuiz);
+      navigationRef.navigate(Screen.wellnessQuiz, needsDeeperCheckIn ? { mode: 'deeper' } : undefined);
     }
   };
 
@@ -239,7 +246,16 @@ export default function VirtualTwinScreen() {
           <FactorCard key={factor.title} factor={factor} />
         ))}
 
-        <BrandButton label="Retake wellness assessment" onPress={openQuiz} />
+        {needsDeeperCheckIn ? (
+          <View style={styles.refineBox}>
+            <Text style={styles.refineTitle}>Want a more accurate biological age?</Text>
+            <Text style={styles.refineBody}>
+              Your twin is based on 10 starter questions. Answer 10 more and we merge them with
+              your first answers — that is what makes wellness score and biological age more accurate.
+            </Text>
+            <BrandButton label="Answer 10 more questions" onPress={openQuiz} />
+          </View>
+        ) : null}
       </ScrollView>
     </AppScreen>
   );
@@ -251,7 +267,7 @@ const styles = StyleSheet.create({
   content: {
     padding: Spacing.base,
     gap: Spacing.md,
-    paddingBottom: TabBarMetrics.contentInset + Spacing.xl,
+    paddingBottom: tabBarScrollPadding,
   },
   stage: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'stretch' },
   metricsCol: { width: 148, gap: 8 },
@@ -317,4 +333,24 @@ const styles = StyleSheet.create({
   factorScore: { fontSize: 11, fontWeight: '700', color: Colors.textSecondary },
   factorWhy: { fontSize: Typography.size.sm, color: Colors.textSecondary, lineHeight: 19, marginTop: 4 },
   factorImprove: { fontSize: Typography.size.xs, fontWeight: '600', color: Colors.primary, lineHeight: 17 },
+  refineBox: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    gap: Spacing.sm,
+    borderWidth: 1.5,
+    borderColor: Colors.primaryLight,
+  },
+  refineTitle: {
+    fontSize: Typography.size.base,
+    fontWeight: '800',
+    color: Colors.text,
+    letterSpacing: -0.3,
+  },
+  refineBody: {
+    fontSize: Typography.size.sm,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+    fontWeight: '500',
+  },
 });

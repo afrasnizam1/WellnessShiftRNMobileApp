@@ -63,33 +63,37 @@ const EMPTY_ACTIVITY: ActivitySnapshot = {
 };
 
 let healthKitInitialized = false;
+let lastConnectError: string | null = null;
+
+function healthKitErrorMessage(err: unknown): string {
+  if (typeof err === 'string' && err.trim()) return err.trim();
+  if (err && typeof err === 'object' && 'message' in err) {
+    const message = (err as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim()) return message.trim();
+  }
+  return 'Apple Health did not finish the permission request.';
+}
 
 async function requestPermissionsIOS(): Promise<boolean> {
-  if (!healthKitReady()) return false;
+  lastConnectError = null;
+  if (!healthKitReady()) {
+    lastConnectError = 'Apple Health is not available in this build.';
+    return false;
+  }
   return new Promise((resolve) => {
     AppleHealthKit.initHealthKit(getPermissions(), (err) => {
       if (err) {
         healthKitInitialized = false;
+        lastConnectError = healthKitErrorMessage(err);
         resolve(false);
         return;
       }
 
-      // initHealthKit can succeed even when the user denied read access —
-      // verify at least one read permission is SharingAuthorized (2).
-      AppleHealthKit.getAuthStatus(getPermissions(), (statusErr, results) => {
-        if (statusErr) {
-          // Fall back to init success if status query fails on older OS builds.
-          healthKitInitialized = true;
-          healthKitStorage.setEnabled(true).catch(() => {});
-          resolve(true);
-          return;
-        }
-        const readStatuses = results?.permissions?.read ?? [];
-        const anyAuthorized = readStatuses.includes(2);
-        healthKitInitialized = anyAuthorized;
-        healthKitStorage.setEnabled(anyAuthorized).catch(() => {});
-        resolve(anyAuthorized);
-      });
+      // HealthKit never reports read access as SharingAuthorized. A finished
+      // requestAuthorization is the success signal; denied reads just look empty.
+      healthKitInitialized = true;
+      healthKitStorage.setEnabled(true).catch(() => {});
+      resolve(true);
     });
   });
 }
@@ -281,9 +285,14 @@ async function getActivityHistoryIOS(days: number): Promise<DailyActivityPoint[]
 
 /** Cross-platform health service (HealthKit on iOS, Health Connect on Android). */
 export const healthKitService = {
+  /** Set when the latest connect attempt failed. Null after a success. */
+  getLastConnectError: (): string | null => lastConnectError,
+
   requestPermissions: async (): Promise<boolean> => {
+    lastConnectError = null;
     if (isAndroid) {
       const ok = await healthConnectService.requestPermissions();
+      lastConnectError = healthConnectService.getLastConnectError();
       if (ok) await healthKitStorage.setEnabled(true);
       return ok;
     }

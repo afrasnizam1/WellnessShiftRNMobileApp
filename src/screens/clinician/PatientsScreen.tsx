@@ -11,21 +11,25 @@ import {
   RefreshControl,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
 import { ClinicianLayout, ClinicianTheme } from '../../theme/clinicianTheme';
 import { useAppStore } from '../../store';
 import { clinicianService } from '../../services/clinicianService';
-import type { ClinicianStackParamList } from '../../types';
+import type { ClinicianStackParamList, ClinicianTabParamList } from '../../types';
 import AppScreen from '../../components/common/AppScreen';
 import ClinicianHeroHeader from '../../components/clinician/ClinicianHeroHeader';
 import ClinicianPatientCard from '../../components/clinician/ClinicianPatientCard';
 
 type Nav = NativeStackNavigationProp<ClinicianStackParamList>;
+type PatientsRoute = RouteProp<ClinicianTabParamList, typeof Screen.patients>;
 
 export default function PatientsScreen() {
   const navigation = useNavigation<Nav>();
+  const route = useRoute<PatientsRoute>();
+  const attentionOnly = route.params?.attentionOnly === true;
   const user = useAppStore((s) => s.user);
   const [patients, setPatients] = useState<Awaited<ReturnType<typeof clinicianService.fetchLinkedPatients>>>([]);
   const [search, setSearch] = useState('');
@@ -43,7 +47,15 @@ export default function PatientsScreen() {
     return clinicianService.watchLinkedPatients(user.uid, setPatients);
   }, [user]);
 
-  const filtered = patients.filter(
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('tabPress' as never, () => {
+      navigation.setParams({ attentionOnly: false } as never);
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  const source = attentionOnly ? patients.filter((p) => p.needsAttention) : patients;
+  const filtered = source.filter(
     (p) =>
       p.displayName.toLowerCase().includes(search.toLowerCase()) ||
       p.email.toLowerCase().includes(search.toLowerCase())
@@ -62,8 +74,18 @@ export default function PatientsScreen() {
   return (
     <View style={styles.root}>
       <ClinicianHeroHeader
-        title="Patients"
-        subtitle={`${patients.length} linked${attentionCount ? ` · ${attentionCount} need attention` : ''}`}
+        title={attentionOnly ? 'Needs attention' : 'Patients'}
+        subtitle={
+          attentionOnly
+            ? `${source.length} patient${source.length === 1 ? '' : 's'} to review`
+            : `${patients.length} linked${attentionCount ? ` · ${attentionCount} need attention` : ''}`
+        }
+        onBack={() => {
+          if (attentionOnly) {
+            navigation.setParams({ attentionOnly: false } as never);
+          }
+          navigation.navigate(Screen.clinicianTabs, { screen: Screen.clinicianDashboard });
+        }}
         actions={[
           { icon: 'person-add-outline', onPress: () => navigation.navigate(Screen.addPatient) },
         ]}
@@ -113,13 +135,17 @@ export default function PatientsScreen() {
               <View style={styles.emptyIcon}>
                 <Ionicons name="people-outline" size={32} color={ClinicianTheme.accent} />
               </View>
-              <Text style={styles.emptyTitle}>No patients found</Text>
+              <Text style={styles.emptyTitle}>
+                {attentionOnly && !search ? 'No one needs attention' : 'No patients found'}
+              </Text>
               <Text style={styles.emptyHint}>
                 {search
                   ? 'Try a different search term.'
-                  : 'Share your invite code from the dashboard to link patients.'}
+                  : attentionOnly
+                    ? 'Patients who match your attention rules will show up here.'
+                    : 'Share your invite code from the dashboard to link patients.'}
               </Text>
-              {!search ? (
+              {!search && !attentionOnly ? (
                 <TouchableOpacity
                   style={styles.emptyBtn}
                   onPress={() => navigation.navigate(Screen.addPatient)}

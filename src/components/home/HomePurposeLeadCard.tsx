@@ -19,8 +19,8 @@ const COPY: Record<
 > = {
   clinician: {
     icon: 'medkit-outline',
-    title: 'Connect with your clinician',
-    body: 'GP referral only — use the invite code for your health issue.',
+    title: 'Connect with a professional',
+    body: 'A doctor, clinician, neurosurgeon, physiotherapist, or physical therapist can link with an invite code.',
     cta: 'Connect',
     colors: ['#F24D80', '#D93A6A'],
   },
@@ -48,7 +48,7 @@ const COPY: Record<
   all: {
     icon: 'apps-outline',
     title: 'Your full wellness toolkit',
-    body: 'Score, learning, and fitness. Clinician care only if GP-referred.',
+    body: 'Score, learning, fitness, and a link to your doctor or therapist.',
     cta: 'View score',
     colors: ['#007AFF', '#8C59BF'],
   },

@@ -184,7 +184,7 @@ export const EXTENDED_FITNESS_MODULES: FitnessModule[] = [
   {
     id: 'flexibility-assessment',
     title: 'Flexibility Assessment',
-    subtitle: 'Mobility screening guide',
+    subtitle: 'Five-move check and a stretch to start',
     category: 'education',
     icon: '🤸',
     color: Colors.fitness,

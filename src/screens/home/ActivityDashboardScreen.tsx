@@ -7,7 +7,7 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { format, parseISO } from 'date-fns';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { AppCard, ScreenHeader, ListRow, AnimatedPressable } from '../../components/ui';
 import WeeklyBarChart from '../../components/activity/WeeklyBarChart';
 import { healthKitService, getHealthPlatformName } from '../../services/healthkit';
@@ -217,7 +217,7 @@ export default function ActivityDashboardScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   header: { paddingHorizontal: Spacing.base },
-  content: { padding: Spacing.base, gap: Spacing.md },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   sectionLabel: {
     fontSize: Typography.size.xs,
     fontWeight: '700',

@@ -6,8 +6,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AppScreen from '../../components/common/AppScreen';
-import { AppCard } from '../../components/ui';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { AppCard, ScreenHeader } from '../../components/ui';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { Screen } from '../../navigation/screenNames';
 import AnatomyViewer, { ANATOMY_MODELS, type AnatomyModel } from '../../components/anatomy/AnatomyViewer';
 
@@ -142,10 +142,11 @@ export default function AnatomyExplorerScreen() {
   return (
     <AppScreen style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Anatomy Explorer</Text>
-          <Text style={styles.subtitle}>Interactive 3D human anatomy learning</Text>
-        </View>
+        <ScreenHeader
+          title="Anatomy Explorer"
+          subtitle="Interactive 3D human anatomy learning"
+          onBack={() => navigation.goBack()}
+        />
 
         <AppCard style={styles.viewerCard}>
           <View style={styles.viewerHeader}>
@@ -355,7 +356,7 @@ const styles = StyleSheet.create({
     padding: Spacing.base, 
     paddingTop: Spacing.xl, 
     gap: Spacing.md, 
-    paddingBottom: Spacing['2xl'] 
+    paddingBottom: tabBarScrollPadding 
   },
   header: {
     alignItems: 'center',

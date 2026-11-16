@@ -5,7 +5,7 @@ import {
   TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius, Shadow, fitnessModuleIonIcon } from '../../theme';
+import { Colors, Typography, Spacing, Radius, Shadow, fitnessModuleIonIcon, tabBarScrollPadding } from '../../theme';
 import AppScreen from '../../components/common/AppScreen';
 import { BackButton, IconBadge } from '../../components/ui';
 
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.sm, paddingVertical: Spacing.md, backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.border },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: Typography.size.base, fontWeight: '700', color: Colors.text },
-  content: { padding: Spacing.base, gap: Spacing.md },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   heroCard: { borderRadius: Radius.xl, padding: Spacing.xl, alignItems: 'center', gap: Spacing.sm },
   heroTitle: { fontSize: Typography.size.xl, fontWeight: '700' },
   heroLatest: { fontSize: Typography.size['2xl'], fontWeight: '700', color: Colors.text, marginTop: Spacing.sm },

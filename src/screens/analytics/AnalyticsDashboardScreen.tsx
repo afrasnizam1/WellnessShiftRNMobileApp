@@ -7,7 +7,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { LineChart, BarChart, PieChart } from 'react-native-gifted-charts';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Colors, Typography, Spacing, Radius, WELLNESS_CATEGORIES } from '../../theme';
+import { Colors, Typography, Spacing, Radius, WELLNESS_CATEGORIES, tabBarScrollPadding } from '../../theme';
 import { AppCard, ScreenHeader, SegmentedControl, ListRow, AnimatedPressable, IconBadge, CategoryIcon, BrandButton } from '../../components/ui';
 import {
   BarChartTooltip,
@@ -437,7 +437,7 @@ export default function AnalyticsDashboardScreen() {
               {scoreLabel(overall)}
             </Text>
             <Text style={styles.scoreHeroHint}>
-              Complete Today's Plan, AI Insights, or retake the assessment to improve.
+              Complete Today's Plan, Wellness Coach, or retake the assessment to improve.
             </Text>
           </View>
           <View style={styles.scoreHeroPie}>
@@ -458,14 +458,14 @@ export default function AnalyticsDashboardScreen() {
           <View style={styles.aiHeader}>
             <IconBadge name="sparkles-outline" color={Colors.brand} size="sm" />
             <View style={{ flex: 1 }}>
-              <Text style={styles.aiTitle}>AI analytics summary</Text>
+              <Text style={styles.aiTitle}>Coach summary</Text>
               <Text style={styles.aiSub}>
                 What’s going well vs what needs improvement — based on your scores, activity & habits.
               </Text>
             </View>
           </View>
           <BrandButton
-            label={summarising ? 'Summarising…' : aiSummary ? 'Refresh summary' : 'Summarize with AI'}
+            label={summarising ? 'Summarising…' : aiSummary ? 'Refresh summary' : 'Summarise with Coach'}
             onPress={runAiSummary}
             loading={summarising}
           />
@@ -1091,7 +1091,11 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   header: { paddingHorizontal: Spacing.base, gap: Spacing.md },
   scroll: { flex: 1 },
-  content: { padding: Spacing.base, gap: Spacing.md },
+  content: {
+    padding: Spacing.base,
+    gap: Spacing.md,
+    paddingBottom: tabBarScrollPadding,
+  },
   card: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,

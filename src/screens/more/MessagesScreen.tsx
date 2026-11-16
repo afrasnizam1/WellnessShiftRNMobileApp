@@ -2,15 +2,15 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TextInput,
-  TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator,
+  TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
+import { Colors, Typography, Spacing, Radius, Shadow, TabBarMetrics } from '../../theme';
 import { useAppStore } from '../../store';
-import { messageService } from '../../services/firebase';
+import { isMessageThreadOpen, messageService } from '../../services/firebase';
 import { clinicianService } from '../../services/clinicianService';
 import { format } from 'date-fns';
-import type { Message } from '../../types';
+import type { Message, MessageThread } from '../../types';
 import AppScreen from '../../components/common/AppScreen';
 
 interface ClinicianInfo {
@@ -23,11 +23,16 @@ export default function MessagesScreen() {
   const navigation = useNavigation<any>();
   const { user, carePlan } = useAppStore();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [thread, setThread] = useState<MessageThread | null>(null);
   const [input, setInput] = useState('');
   const [clinician, setClinician] = useState<ClinicianInfo | null>(null);
   const [loadingClinician, setLoadingClinician] = useState(true);
   const [sending, setSending] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+
+  const open =
+    thread?.status !== 'closed' &&
+    (isMessageThreadOpen(thread) || messages.length > 0);
 
   useEffect(() => {
     if (!user) return;
@@ -49,23 +54,27 @@ export default function MessagesScreen() {
 
   useEffect(() => {
     if (!user || !clinician) return;
-    const unsub = messageService.watchMessages(user.uid, clinician.clinicianId, (msgs) => {
+    const unsubMsgs = messageService.watchMessages(user.uid, clinician.clinicianId, (msgs) => {
       setMessages(msgs);
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     });
-    return unsub;
+    const unsubThread = messageService.watchThread(user.uid, clinician.clinicianId, setThread);
+    return () => {
+      unsubMsgs();
+      unsubThread();
+    };
   }, [user, clinician]);
 
   useFocusEffect(
     useCallback(() => {
-      if (!user || !clinician) return;
+      if (!user || !clinician || !open) return;
       messageService.markMessagesRead(user.uid, clinician.clinicianId, user.uid).catch(() => {});
-    }, [user, clinician])
+    }, [user, clinician, open])
   );
 
   const sendMessage = async () => {
     const text = input.trim();
-    if (!text || !user || !clinician || sending) return;
+    if (!text || !user || !clinician || sending || !open) return;
     setInput('');
     setSending(true);
     try {
@@ -77,6 +86,12 @@ export default function MessagesScreen() {
         timestamp: new Date().toISOString(),
         isRead: false,
       });
+    } catch (error) {
+      Alert.alert(
+        'Message not sent',
+        error instanceof Error ? error.message : 'Please wait for your clinician to start the conversation.',
+      );
+      setInput(text);
     } finally {
       setSending(false);
     }
@@ -103,11 +118,17 @@ export default function MessagesScreen() {
         <View style={styles.emptyState}>
           <Text style={styles.emptyEmoji}>💬</Text>
           <Text style={styles.emptyTitle}>No clinician connected</Text>
-          <Text style={styles.emptySub}>Connect with a clinician to start messaging.</Text>
+          <Text style={styles.emptySub}>Connect with a clinician to receive messages.</Text>
         </View>
       </AppScreen>
     );
   }
+
+  const emptyCopy = open
+    ? 'Your clinician started this conversation. Reply below.'
+    : thread?.status === 'closed'
+      ? 'This conversation has ended. Your clinician can start a new one when needed.'
+      : 'Waiting for your clinician to start a conversation. Only they can open the chat.';
 
   return (
     <AppScreen style={styles.safe}>
@@ -117,9 +138,13 @@ export default function MessagesScreen() {
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>{clinician.clinicianName}</Text>
-          {clinician.specialty ? (
-            <Text style={styles.headerSub}>{clinician.specialty}</Text>
-          ) : null}
+          <Text style={styles.headerSub}>
+            {open
+              ? (clinician.specialty ?? 'Conversation open')
+              : thread?.status === 'closed'
+                ? 'Conversation ended'
+                : 'Waiting for clinician'}
+          </Text>
         </View>
         <View style={{ width: 40 }} />
       </View>
@@ -133,7 +158,7 @@ export default function MessagesScreen() {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyChat}>
-              <Text style={styles.emptyChatText}>No messages yet. Say hello to your clinician!</Text>
+              <Text style={styles.emptyChatText}>{emptyCopy}</Text>
             </View>
           }
           renderItem={({ item }) => {
@@ -152,28 +177,35 @@ export default function MessagesScreen() {
           }}
         />
 
-        <View style={styles.inputBar}>
-          <TextInput
-            style={styles.input}
-            placeholder="Message your clinician…"
-            placeholderTextColor={Colors.textTertiary}
-            value={input}
-            onChangeText={setInput}
-            multiline
-            maxLength={500}
-          />
-          <TouchableOpacity
-            style={[styles.sendBtn, (!input.trim() || sending) && styles.sendBtnDisabled]}
-            onPress={sendMessage}
-            disabled={!input.trim() || sending}
-          >
-            {sending ? (
-              <ActivityIndicator color={Colors.white} size="small" />
-            ) : (
-              <Text style={styles.sendBtnText}>↑</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+        {open ? (
+          <View style={styles.inputBar}>
+            <TextInput
+              style={styles.input}
+              placeholder="Reply to your clinician…"
+              placeholderTextColor={Colors.textTertiary}
+              value={input}
+              onChangeText={setInput}
+              multiline
+              maxLength={500}
+              editable={!sending}
+            />
+            <TouchableOpacity
+              style={[styles.sendBtn, (!input.trim() || sending) && styles.sendBtnDisabled]}
+              onPress={sendMessage}
+              disabled={!input.trim() || sending}
+            >
+              {sending ? (
+                <ActivityIndicator color={Colors.white} size="small" />
+              ) : (
+                <Text style={styles.sendBtnText}>↑</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.waitingBar}>
+            <Text style={styles.waitingText}>{emptyCopy}</Text>
+          </View>
+        )}
       </KeyboardAvoidingView>
     </AppScreen>
   );
@@ -193,7 +225,7 @@ const styles = StyleSheet.create({
   headerCenter: { flex: 1, alignItems: 'center' },
   headerTitle: { fontSize: Typography.size.base, fontWeight: '700', color: Colors.text },
   headerSub: { fontSize: Typography.size.xs, color: Colors.textSecondary },
-  messagesList: { padding: Spacing.base, gap: Spacing.sm, paddingBottom: Spacing.lg },
+  messagesList: { padding: Spacing.base, gap: Spacing.sm, paddingBottom: Spacing.xl },
   messageRow: { flexDirection: 'row' },
   messageRowMe: { flexDirection: 'row-reverse' },
   bubble: { maxWidth: '78%', borderRadius: Radius.lg, padding: Spacing.md, gap: 2 },
@@ -204,11 +236,14 @@ const styles = StyleSheet.create({
   messageTextMe: { color: Colors.white },
   messageTime: { fontSize: 10, color: Colors.textTertiary, alignSelf: 'flex-end', marginTop: 2 },
   messageTimeMe: { color: 'rgba(255,255,255,0.6)' },
-  emptyChat: { alignItems: 'center', paddingTop: Spacing['3xl'] },
-  emptyChatText: { fontSize: Typography.size.sm, color: Colors.textSecondary, textAlign: 'center' },
+  emptyChat: { alignItems: 'center', paddingTop: Spacing['3xl'], paddingHorizontal: Spacing.lg },
+  emptyChatText: { fontSize: Typography.size.sm, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
   inputBar: {
     flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.sm,
-    paddingHorizontal: Spacing.base, paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.base,
+    paddingTop: Spacing.md,
+    // Keep composer above the floating tab bar
+    paddingBottom: Math.max(TabBarMetrics.contentInset - TabBarMetrics.height + Spacing.md, Spacing.lg),
     backgroundColor: Colors.white, borderTopWidth: 1, borderTopColor: Colors.border,
   },
   input: {
@@ -223,6 +258,20 @@ const styles = StyleSheet.create({
   },
   sendBtnDisabled: { backgroundColor: Colors.border },
   sendBtnText: { color: Colors.white, fontSize: 18, fontWeight: '700' },
+  waitingBar: {
+    paddingHorizontal: Spacing.base,
+    paddingTop: Spacing.lg,
+    paddingBottom: Math.max(TabBarMetrics.contentInset - TabBarMetrics.height + Spacing.md, Spacing.lg),
+    backgroundColor: Colors.white,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  waitingText: {
+    fontSize: Typography.size.sm,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md, padding: Spacing.xl },
   emptyEmoji: { fontSize: 56 },
   emptyTitle: { fontSize: Typography.size.xl, fontWeight: '700', color: Colors.text },

@@ -8,12 +8,14 @@ import type { CarePlan, DailyPlan } from '../../types';
 type Props = {
   startHereDone: boolean;
   dayOneDone: boolean;
+  needsDeeperCheckIn?: boolean;
   hasCheckedInToday: boolean;
   healthConnected: boolean;
   dailyPlan: DailyPlan | null;
   carePlan: CarePlan | null;
   onStartHere: () => void;
   onDayOne: () => void;
+  onDeeperCheckIn?: () => void;
   onCheckIn: () => void;
   onDailyPlan: () => void;
   onCarePlan: () => void;
@@ -24,12 +26,14 @@ type Props = {
 export default function HomeNextSteps({
   startHereDone,
   dayOneDone,
+  needsDeeperCheckIn,
   hasCheckedInToday,
   healthConnected,
   dailyPlan,
   carePlan,
   onStartHere,
   onDayOne,
+  onDeeperCheckIn,
   onCheckIn,
   onDailyPlan,
   onCarePlan,
@@ -42,6 +46,13 @@ export default function HomeNextSteps({
     }
     if (!dayOneDone) {
       return { title: 'Complete your Day 1 checklist', icon: 'checkbox-outline' as const, onPress: onDayOne };
+    }
+    if (needsDeeperCheckIn && onDeeperCheckIn) {
+      return {
+        title: '10 more questions for a more accurate score & age',
+        icon: 'sparkles' as const,
+        onPress: onDeeperCheckIn,
+      };
     }
     if (!hasCheckedInToday) {
       return { title: 'Do your daily check-in', icon: 'heart-outline' as const, onPress: onCheckIn };
@@ -63,12 +74,14 @@ export default function HomeNextSteps({
   }, [
     startHereDone,
     dayOneDone,
+    needsDeeperCheckIn,
     hasCheckedInToday,
     healthConnected,
     dailyPlan,
     carePlan,
     onStartHere,
     onDayOne,
+    onDeeperCheckIn,
     onCheckIn,
     onDailyPlan,
     onCarePlan,

@@ -2,11 +2,11 @@
 import React, { useEffect, useState } from 'react';
 import { Screen } from '../../navigation/screenNames';
 import {
-  View, Text, StyleSheet, Alert, Platform, Linking,
+  View, Text, StyleSheet, Alert, Platform, Linking, Pressable,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Shadow, type IoniconName } from '../../theme';
+import { Colors, Typography, Spacing, Shadow, type IoniconName, tabBarScrollPadding } from '../../theme';
 import { AppCard, ListRow, ScreenLayout, AnimatedPressable } from '../../components/ui';
 import ClinicianInfoCard from '../../components/care/ClinicianInfoCard';
 import { useShallow } from 'zustand/react/shallow';
@@ -132,6 +132,13 @@ export default function MoreMenuScreen() {
     });
   };
 
+  const openSupportCentre = () => {
+    navigation.navigate(Screen.website, {
+      url: appConfig.supportUrl,
+      title: 'Support',
+    });
+  };
+
   const openUrl = (url: string) => Linking.openURL(url).catch(() => {
     Alert.alert('Could not open link');
   });
@@ -162,16 +169,25 @@ export default function MoreMenuScreen() {
     );
   };
 
+  const [signingOut, setSigningOut] = useState(false);
+
   const handleSignOut = () => {
+    if (signingOut) return;
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Sign Out',
         style: 'destructive',
         onPress: () => {
-          signOutCurrentUser(user).catch(() => {
-            Alert.alert('Sign Out', 'Could not complete sign out. Please try again.');
-          });
+          setSigningOut(true);
+          // Defer so the Alert can dismiss before async work (esp. Android).
+          setTimeout(() => {
+            signOutCurrentUser(user)
+              .catch(() => {
+                setSigningOut(false);
+                Alert.alert('Sign Out', 'Could not complete sign out. Please try again.');
+              });
+          }, 50);
         },
       },
     ]);
@@ -267,6 +283,7 @@ export default function MoreMenuScreen() {
         key={row.label + index}
         title={row.label}
         subtitle={row.sublabel}
+        destructive={row.destructive}
         icon={
           <Ionicons
             name={row.icon}
@@ -311,10 +328,16 @@ export default function MoreMenuScreen() {
       rows: [
         { icon: 'library-outline', iconGradient: ['#2C3E50', '#546E7A'], label: 'Content Library', sublabel: 'Articles, guides & programs', screen: Screen.contentLibrary },
         { icon: 'newspaper-outline', iconGradient: ['#8C59BF', '#946BFA'], label: 'Wellness Blog', sublabel: 'Articles and expert tips', screen: Screen.blog },
-        { icon: 'chatbox-ellipses-outline', iconGradient: ['#2EDBBD', '#34C759'], label: 'Community Forum', sublabel: 'Discuss wellness with others', screen: Screen.forum },
-        { icon: 'people-outline', iconGradient: ['#946BFA', '#7A57F5'], label: 'Coaching & Consultations', sublabel: 'Book 1-on-1 sessions with certified coaches', screen: Screen.coaching },
-        { icon: 'newspaper-outline', iconGradient: ['#389EFA', '#007AFF'], label: Screen.newsletter, sublabel: 'Weekly tips, recipes & wellness content', screen: Screen.newsletter },
-        { icon: 'globe-outline', iconGradient: ['#2EDBBD', '#34C759'], label: 'WellnessShift Website', sublabel: 'wellnessshift.co.uk', action: openWebsite },
+        ...(appConfig.enableCommunityForum
+          ? [{ icon: 'chatbox-ellipses-outline' as IconName, iconGradient: ['#2EDBBD', '#34C759'] as [string, string], label: 'Community Forum', sublabel: 'Discuss wellness with others', screen: Screen.forum }]
+          : []),
+        ...(appConfig.enableCoachingBookings
+          ? [{ icon: 'people-outline' as IconName, iconGradient: ['#946BFA', '#7A57F5'] as [string, string], label: 'Coaching & Consultations', sublabel: 'Book 1-on-1 sessions with certified coaches', screen: Screen.coaching }]
+          : []),
+        ...(appConfig.enableNewsletterSignup
+          ? [{ icon: 'newspaper-outline' as IconName, iconGradient: ['#389EFA', '#007AFF'] as [string, string], label: Screen.newsletter, sublabel: 'Weekly tips, recipes & wellness content', screen: Screen.newsletter }]
+          : []),
+        { icon: 'globe-outline', iconGradient: ['#2EDBBD', '#34C759'], label: 'Wellness Shift website', sublabel: 'wellnesshift.co.uk', action: openWebsite },
       ],
     },
     ...(showFemaleHealth ? [{
@@ -363,7 +386,7 @@ export default function MoreMenuScreen() {
           label: 'Quick Start guide',
           sublabel: 'Reopen the in-app tour',
           action: async () => {
-            if (user) await onboardingStorage.setPendingInAppGuide(user.uid, true);
+            if (user) await onboardingStorage.requestAppTourReplay(user.uid);
             navigation.navigate(Screen.tabHome, { screen: Screen.homeDashboard });
           },
         },
@@ -392,10 +415,11 @@ export default function MoreMenuScreen() {
       title: 'Help & Legal',
       rows: [
         { icon: 'help-circle-outline', iconGradient: ['#389EFA', '#007AFF'], label: 'Help & FAQ', screen: Screen.help },
-        { icon: 'mail-outline', iconGradient: ['#2EDBBD', '#34C759'], label: 'Contact Support', sublabel: 'support@wellnessshift.co.uk', action: () => openUrl('mailto:support@wellnessshift.co.uk') },
+        { icon: 'mail-outline', iconGradient: ['#2EDBBD', '#34C759'], label: 'Contact Support', sublabel: appConfig.supportEmail, action: () => openUrl(`mailto:${appConfig.supportEmail}`) },
+        { icon: 'globe-outline', iconGradient: ['#389EFA', '#007AFF'], label: 'Support centre', sublabel: 'wellnesshift.co.uk/support', action: openSupportCentre },
         { icon: 'lock-closed-outline', iconGradient: ['#8C59BF', '#994DB3'], label: 'Privacy Policy', screen: Screen.privacyPolicy },
         { icon: 'document-text-outline', iconGradient: ['#FF8561', '#FF9500'], label: 'Terms of Service', screen: Screen.termsOfService },
-        { icon: 'hardware-chip-outline', iconGradient: ['#F24D80', '#FF6699'], label: 'AI Disclosure', screen: Screen.aiDisclosure },
+        { icon: 'hardware-chip-outline', iconGradient: ['#F24D80', '#FF6699'], label: 'Wellness Coach disclosure', screen: Screen.aiDisclosure },
         { icon: 'shield-checkmark-outline', iconGradient: ['#007AFF', '#389EFA'], label: 'Your Data Rights (GDPR)', screen: Screen.dataRights },
         { icon: 'heart-outline', iconGradient: ['#FF6961', '#F24D80'], label: Platform.OS === 'android' ? 'Health Connect Disclosure' : 'HealthKit Disclosure', screen: Screen.healthDataDisclosure },
       ],
@@ -411,7 +435,6 @@ export default function MoreMenuScreen() {
           destructive: true,
           action: () => navigation.navigate(Screen.dataRights),
         },
-        { icon: 'log-out-outline', iconGradient: ['#FF9500', '#FF8561'], label: 'Sign Out', destructive: true, action: handleSignOut },
       ],
     },
   ];
@@ -474,13 +497,31 @@ export default function MoreMenuScreen() {
         </View>
       ))}
 
+      <View style={styles.signOutWrap}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.signOutBtn,
+            pressed && styles.signOutBtnPressed,
+            signingOut && styles.signOutBtnDisabled,
+          ]}
+          onPress={handleSignOut}
+          disabled={signingOut}
+          accessibilityRole="button"
+          accessibilityLabel="Sign out"
+          android_ripple={{ color: 'rgba(255, 59, 48, 0.12)' }}
+        >
+          <Ionicons name="log-out-outline" size={20} color={Colors.error} />
+          <Text style={styles.signOutText}>{signingOut ? 'Signing out…' : 'Sign Out'}</Text>
+        </Pressable>
+      </View>
+
       <Text style={styles.version}>Wellness Shift v1.0.0 • UK</Text>
     </ScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingBottom: Spacing.base },
+  content: { paddingBottom: tabBarScrollPadding },
   profileWrap: { paddingHorizontal: Spacing.base, marginBottom: Spacing.md },
   profileCard: {
     padding: Spacing.base,
@@ -553,6 +594,32 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     backgroundColor: Colors.borderLight,
     marginHorizontal: Spacing.base,
+  },
+  signOutWrap: {
+    paddingHorizontal: Spacing.base,
+    marginTop: Spacing.md,
+  },
+  signOutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    minHeight: 52,
+    borderRadius: 14,
+    backgroundColor: Colors.errorLight,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 59, 48, 0.22)',
+  },
+  signOutBtnPressed: {
+    opacity: 0.85,
+  },
+  signOutBtnDisabled: {
+    opacity: 0.6,
+  },
+  signOutText: {
+    color: Colors.error,
+    fontSize: Typography.size.base,
+    fontWeight: '700',
   },
   version: {
     textAlign: 'center',

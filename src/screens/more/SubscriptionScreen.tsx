@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
+import { Colors, Typography, Spacing, Radius, Shadow, tabBarScrollPadding } from '../../theme';
 import { useAppStore } from '../../store';
 import { subscriptionService } from '../../services/subscriptionService';
 import { getEffectiveTier } from '../../services/iap';
@@ -19,7 +19,7 @@ const PLANS = [
     color: Colors.textSecondary,
     features: [
       'Basic health calculators',
-      'Limited AI coach messages',
+      'Limited Wellness Coach messages',
       '3 brain games per day',
       'Progress tracking',
     ],
@@ -31,7 +31,7 @@ const PLANS = [
     popular: true,
     features: [
       'Everything in Free',
-      'Higher AI coach allowance',
+      'Higher Wellness Coach allowance',
       'Advanced analytics',
       'PDF wellness export',
       'Meal planning tools',
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
   backBtn: { width: 40 },
   backText: { fontSize: 32, color: Colors.primary, lineHeight: 38 },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: Typography.size.base, fontWeight: '700', color: Colors.text },
-  content: { padding: Spacing.base, gap: Spacing.md },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
 
   currentBanner: {
     borderRadius: Radius.xl, padding: Spacing.xl,

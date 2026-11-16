@@ -3,7 +3,7 @@ import { FITNESS_MODULES } from '../data/fitnessData';
 import { Screen } from '../navigation/screenNames';
 import { navigationRef } from '../navigation/navigationRef';
 import type { FitnessModule, SubscriptionTier } from '../types';
-import { getEffectiveTier } from '../services/iap';
+import { canAccessFeature, getEffectiveTier } from '../services/iap';
 
 export type FitnessScreenName =
   | typeof Screen.fitnessHub
@@ -97,13 +97,31 @@ export function findModuleByTitleOrId(key: string): FitnessModule | undefined {
   );
 }
 
+export function isFitnessModuleLocked(
+  module: FitnessModule,
+  subscriptionTier: SubscriptionTier = 'free',
+): boolean {
+  if (module.id === 'workout-library') {
+    return !canAccessFeature('customWorkouts', subscriptionTier);
+  }
+  if (module.isPremium) {
+    return getEffectiveTier(subscriptionTier) === 'free';
+  }
+  return false;
+}
+
+export function paywallFeatureForModule(module: FitnessModule): string {
+  if (module.id === 'workout-library') return 'customWorkouts';
+  return module.id || module.title;
+}
+
 export function navigateToFitnessModule(
   navigation: NavigationProp<any>,
   module: FitnessModule,
   subscriptionTier: SubscriptionTier = 'free'
 ) {
-  if (module.isPremium && getEffectiveTier(subscriptionTier) === 'free') {
-    navigation.navigate(Screen.subscriptionPaywall, { feature: module.title });
+  if (isFitnessModuleLocked(module, subscriptionTier)) {
+    navigation.navigate(Screen.subscriptionPaywall, { feature: paywallFeatureForModule(module) });
     return;
   }
   const route = getRouteForModule(module);

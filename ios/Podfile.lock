@@ -1371,6 +1371,9 @@ PODS:
   - Firebase/Firestore (12.15.0):
     - Firebase/CoreOnly
     - FirebaseFirestore (~> 12.15.0)
+  - Firebase/Functions (12.15.0):
+    - Firebase/CoreOnly
+    - FirebaseFunctions (~> 12.15.0)
   - Firebase/Messaging (12.15.0):
     - Firebase/CoreOnly
     - FirebaseMessaging (~> 12.15.0)
@@ -1469,6 +1472,14 @@ PODS:
     - gRPC-Core (~> 1.69.0)
     - leveldb-library (~> 1.22)
     - nanopb (~> 3.30910.0)
+  - FirebaseFunctions (12.15.0):
+    - FirebaseAppCheckInterop (~> 12.15.0)
+    - FirebaseAuthInterop (~> 12.15.0)
+    - FirebaseCore (~> 12.15.0)
+    - FirebaseCoreExtension (~> 12.15.0)
+    - FirebaseMessagingInterop (~> 12.15.0)
+    - FirebaseSharedSwift (~> 12.15.0)
+    - GTMSessionFetcher/Core (< 6.0, >= 3.4)
   - FirebaseInstallations (12.15.0):
     - FirebaseCore (~> 12.15.0)
     - GoogleUtilities/Environment (~> 8.1)
@@ -1483,6 +1494,7 @@ PODS:
     - GoogleUtilities/Reachability (~> 8.1)
     - GoogleUtilities/UserDefaults (~> 8.1)
     - nanopb (~> 3.30910.0)
+  - FirebaseMessagingInterop (12.15.0)
   - FirebaseRemoteConfig (12.15.0):
     - FirebaseABTesting (~> 12.15.0)
     - FirebaseCore (~> 12.15.0)
@@ -4713,6 +4725,36 @@ PODS:
     - RNFBApp
     - SocketRocket
     - Yoga
+  - RNFBFunctions (25.1.0):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - Firebase/Functions (= 12.15.0)
+    - fmt
+    - glog
+    - hermes-engine
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - RNFBApp
+    - SocketRocket
+    - Yoga
   - RNFBMessaging (25.1.0):
     - boost
     - DoubleConversion
@@ -5350,6 +5392,7 @@ DEPENDENCIES:
   - "RNFBAuth (from `../node_modules/@react-native-firebase/auth`)"
   - "RNFBCrashlytics (from `../node_modules/@react-native-firebase/crashlytics`)"
   - "RNFBFirestore (from `../node_modules/@react-native-firebase/firestore`)"
+  - "RNFBFunctions (from `../node_modules/@react-native-firebase/functions`)"
   - "RNFBMessaging (from `../node_modules/@react-native-firebase/messaging`)"
   - "RNFBRemoteConfig (from `../node_modules/@react-native-firebase/remote-config`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
@@ -5389,8 +5432,10 @@ SPEC REPOS:
     - FirebaseCrashlytics
     - FirebaseFirestore
     - FirebaseFirestoreInternal
+    - FirebaseFunctions
     - FirebaseInstallations
     - FirebaseMessaging
+    - FirebaseMessagingInterop
     - FirebaseRemoteConfig
     - FirebaseRemoteConfigInterop
     - FirebaseSessions
@@ -5643,6 +5688,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-firebase/crashlytics"
   RNFBFirestore:
     :path: "../node_modules/@react-native-firebase/firestore"
+  RNFBFunctions:
+    :path: "../node_modules/@react-native-firebase/functions"
   RNFBMessaging:
     :path: "../node_modules/@react-native-firebase/messaging"
   RNFBRemoteConfig:
@@ -5714,8 +5761,10 @@ SPEC CHECKSUMS:
   FirebaseCrashlytics: 87e76cc33259b076dd1f96cd829db76849338e08
   FirebaseFirestore: 55d10a70baf9eb77fb2d6cd059dde508d28b5bcc
   FirebaseFirestoreInternal: dd4800b1a2f0ca15c496092e9eaf037e89e34281
+  FirebaseFunctions: 207bd3636bf538a5852a1ae34737fa15581e6f7a
   FirebaseInstallations: eb29ccbf64eaedf86fd5b2ccc7fabde567660b52
   FirebaseMessaging: 40017d7bc8457ee295b0f41d480a80fdabc9994e
+  FirebaseMessagingInterop: 23d50835a19ee3ffae1e5058b9dfea8b651ff298
   FirebaseRemoteConfig: d8b57e994277aabef7cca708e671ce676eefed7a
   FirebaseRemoteConfigInterop: 7e3d57ce4b1e958bb1d15403faa7178f46bbb5b7
   FirebaseSessions: acfe7eadca47cda94ac86592737204581bb1abf6
@@ -5831,6 +5880,7 @@ SPEC CHECKSUMS:
   RNFBAuth: 4c68e9bbf779a7dc270364e2b9daa4c3fa52a06e
   RNFBCrashlytics: 8c1ec8fd2b218d9891878c0bd9428f9e875078c6
   RNFBFirestore: 9cd3181a01c8fbe08ada461150381b10214006c3
+  RNFBFunctions: 3fa71a0fcc6020c59043cec3a185fb620717d9c5
   RNFBMessaging: 7bf784ca7b67c052629cf669e20d9966c92e151b
   RNFBRemoteConfig: a5fb399c53510fa15099bb5ffc6536c9b539c856
   RNGestureHandler: e8c372cdcecae21216926a82fed85d1a4f45e34c

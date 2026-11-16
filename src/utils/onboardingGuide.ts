@@ -31,8 +31,8 @@ export function getContextualGuideCopy(primaryGoal?: string | null): {
   const destination = getContextualGuideDestination(primaryGoal);
   if (destination === 'clinician') {
     return {
-      title: 'Connect with your GP-referred clinician',
-      body: 'Clinician linking is only for patients with a health issue whose GP referred them. Open My Care and enter the invite code they gave you.',
+      title: 'Connect with your professional',
+      body: 'Open My Care and enter the invite code from your doctor, clinician, neurosurgeon, physiotherapist, or physical therapist.',
       cta: 'Open My Care',
     };
   }

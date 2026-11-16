@@ -1,8 +1,8 @@
 import React, { useMemo, memo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
+import { Colors, Typography, Radius, Shadow } from '../../theme';
 import { AnimatedPressable } from '../ui';
 import { computeBiologicalAge, type BiologicalAgeBand } from '../../utils/biologicalAge';
 import type { WellnessScore } from '../../types';
@@ -15,7 +15,19 @@ type Props = {
   onImproveScore?: () => void;
   onAddDateOfBirth?: () => void;
   onOpenVirtualTwin?: () => void;
+  showAccuracyPrompt?: boolean;
 };
+
+const BIO_AGE_BG = require('../../assets/anatomy/multiple-myeloma.png');
+
+function CardBackdrop() {
+  return (
+    <View style={styles.bgClip} pointerEvents="none">
+      <Image source={BIO_AGE_BG} style={styles.bg} resizeMode="cover" />
+      <View style={styles.scrim} />
+    </View>
+  );
+}
 
 const BAND_COLORS: Record<BiologicalAgeBand, string> = {
   poor: Colors.error,
@@ -32,6 +44,7 @@ export default memo(function BiologicalAgeCard({
   weightKg,
   onAddDateOfBirth,
   onOpenVirtualTwin,
+  showAccuracyPrompt,
 }: Props) {
   const result = useMemo(() => {
     if (!dateOfBirth || !wellnessScore) return null;
@@ -48,23 +61,20 @@ export default memo(function BiologicalAgeCard({
   if (!dateOfBirth || !result) {
     return (
       <View style={styles.card}>
-        <LinearGradient
-          colors={['rgba(0,122,255,0.06)', 'rgba(242,77,128,0.04)', '#FFFFFF']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.wash}
-        />
-        <Text style={styles.kicker}>Bio age</Text>
-        <Text style={styles.emptyTitle}>Add your date of birth</Text>
-        <Text style={styles.subtitle}>
-          We estimate biological age from your age and wellness score.
-        </Text>
-        {onAddDateOfBirth ? (
-          <AnimatedPressable style={styles.cta} onPress={onAddDateOfBirth}>
-            <Text style={styles.ctaText}>Open Profile</Text>
-            <Ionicons name="arrow-forward" size={14} color={Colors.primary} />
-          </AnimatedPressable>
-        ) : null}
+        <CardBackdrop />
+        <View style={styles.sheet}>
+          <Text style={styles.kicker}>Bio age</Text>
+          <Text style={styles.emptyTitle}>Add your date of birth</Text>
+          <Text style={styles.subtitle}>
+            We estimate biological age from your age and wellness score.
+          </Text>
+          {onAddDateOfBirth ? (
+            <AnimatedPressable style={styles.cta} onPress={onAddDateOfBirth}>
+              <Text style={styles.ctaText}>Open Profile</Text>
+              <Ionicons name="arrow-forward" size={14} color={Colors.primary} />
+            </AnimatedPressable>
+          ) : null}
+        </View>
       </View>
     );
   }
@@ -93,16 +103,11 @@ export default memo(function BiologicalAgeCard({
       accessibilityLabel={`Biological age ${ageLabel}. Open your virtual twin.`}
     >
       <View style={styles.card}>
-        <LinearGradient
-          colors={['rgba(0,122,255,0.07)', 'rgba(242,77,128,0.05)', '#FFFFFF']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.wash}
-        />
-
+        <CardBackdrop />
+        <View style={styles.sheet}>
         <View style={styles.header}>
           <Text style={styles.kicker}>Bio age</Text>
-          <View style={[styles.bandPill, { backgroundColor: `${accent}18` }]}>
+          <View style={[styles.bandPill, { backgroundColor: Colors.white, borderColor: accent }]}>
             <Text style={[styles.bandPillText, { color: accent }]}>{result.bandLabel}</Text>
           </View>
         </View>
@@ -153,6 +158,12 @@ export default memo(function BiologicalAgeCard({
           <Text style={styles.ctaText}>Explore virtual twin</Text>
           <Ionicons name="arrow-forward" size={14} color={Colors.primary} />
         </View>
+        {showAccuracyPrompt ? (
+          <Text style={styles.accuracyText}>
+            Based on 10 starter questions. Answer 10 more for a more accurate biological age.
+          </Text>
+        ) : null}
+        </View>
       </View>
     </AnimatedPressable>
   );
@@ -160,17 +171,35 @@ export default memo(function BiologicalAgeCard({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 24,
-    padding: Spacing.lg,
-    gap: Spacing.md,
+    borderRadius: 22,
+    padding: 6,
     backgroundColor: Colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.borderLight,
     overflow: 'hidden',
     ...Shadow.sm,
   },
-  wash: {
+  bgClip: {
     ...StyleSheet.absoluteFill,
+    overflow: 'hidden',
+  },
+  bg: {
+    position: 'absolute',
+    width: '132%',
+    height: '240%',
+    left: '-16%',
+    top: '-55%',
+  },
+  scrim: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+  },
+  sheet: {
+    backgroundColor: 'rgba(255,255,255,0.94)',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 8,
   },
   header: {
     flexDirection: 'row',
@@ -180,14 +209,15 @@ const styles = StyleSheet.create({
   kicker: {
     fontSize: 12,
     fontWeight: '700',
-    color: Colors.textSecondary,
+    color: Colors.text,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
   bandPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
     borderRadius: Radius.pill,
+    borderWidth: 1,
   },
   bandPillText: {
     fontSize: 12,
@@ -197,31 +227,31 @@ const styles = StyleSheet.create({
   hero: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: Spacing.md,
+    gap: 10,
   },
   ageValue: {
-    fontSize: 56,
+    fontSize: 44,
     fontWeight: '800',
     color: Colors.text,
-    letterSpacing: -2.4,
-    lineHeight: 58,
+    letterSpacing: -1.8,
+    lineHeight: 46,
   },
   heroMeta: {
     flex: 1,
-    paddingBottom: 8,
-    gap: 2,
+    paddingBottom: 4,
+    gap: 1,
   },
   ageUnit: {
     fontSize: Typography.size.sm,
     fontWeight: '700',
-    color: Colors.textTertiary,
+    color: Colors.textSecondary,
     letterSpacing: 0.4,
     textTransform: 'uppercase',
   },
   subtitle: {
     fontSize: Typography.size.sm,
-    color: Colors.textSecondary,
-    lineHeight: 19,
+    color: Colors.text,
+    lineHeight: 17,
     fontWeight: '500',
   },
   emptyTitle: {
@@ -231,13 +261,13 @@ const styles = StyleSheet.create({
     letterSpacing: -0.4,
   },
   gaugeBlock: {
-    gap: 6,
+    gap: 3,
   },
   gaugeTrack: {
     height: 8,
     borderRadius: 999,
     overflow: 'visible',
-    backgroundColor: Colors.backgroundAlt,
+    backgroundColor: Colors.white,
   },
   gaugeFill: {
     ...StyleSheet.absoluteFill,
@@ -267,7 +297,7 @@ const styles = StyleSheet.create({
   gaugeLabel: {
     fontSize: 10,
     fontWeight: '600',
-    color: Colors.textTertiary,
+    color: Colors.textSecondary,
     letterSpacing: 0.3,
   },
   statRow: {
@@ -276,24 +306,24 @@ const styles = StyleSheet.create({
   },
   statChip: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.72)',
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 6,
     alignItems: 'center',
-    gap: 2,
+    gap: 1,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.borderLight,
   },
   statLabel: {
     fontSize: 10,
     fontWeight: '600',
-    color: Colors.textTertiary,
+    color: Colors.textSecondary,
     letterSpacing: 0.3,
     textTransform: 'uppercase',
   },
   statValue: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '800',
     color: Colors.text,
     letterSpacing: -0.4,
@@ -303,14 +333,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
+    gap: 6,
+    paddingVertical: 8,
     borderRadius: Radius.pill,
-    backgroundColor: Colors.primaryLight,
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.primaryLight,
   },
   ctaText: {
     fontSize: Typography.size.sm,
     fontWeight: '700',
     color: Colors.primary,
+  },
+  accuracyText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.primary,
+    lineHeight: 16,
   },
 });

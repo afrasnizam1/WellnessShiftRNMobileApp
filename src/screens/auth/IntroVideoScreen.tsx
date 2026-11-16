@@ -16,7 +16,7 @@ import { Colors, Typography, Spacing, Shadow } from '../../theme';
 import { BrandButton, AnimatedPressable } from '../../components/ui';
 import WellnessShiftLogoBadge from '../../components/auth/WellnessShiftLogoBadge';
 import { appConfig } from '../../config/appConfig';
-import { onboardingStorage } from '../../services/onboardingStorage';
+import { isFirstRunAccount, onboardingStorage } from '../../services/onboardingStorage';
 import {
   pendingCanShowResults,
   pendingOnboardingStorage,
@@ -48,14 +48,15 @@ const SCENES = [
 
 const SCENE_MS = 2800;
 
-type Stage = 'breath' | 'welcome';
+type Stage = 'hold' | 'breath' | 'welcome';
 
 export default function IntroVideoScreen() {
   const navigation = useNavigation<any>();
   const { user, setUser, hasSeenIntro } = useAppStore();
   const [finishing, setFinishing] = useState(false);
-  // Always start with breathe-in/out on this screen (launch welcome).
-  const [stage, setStage] = useState<Stage>('breath');
+  // Signed-in users wait until we know this is a first-run account.
+  // Otherwise "Breathe in" flashes for a second after login.
+  const [stage, setStage] = useState<Stage>(user ? 'hold' : 'breath');
   const [breathPhase, setBreathPhase] = useState<'in' | 'out'>('in');
   const [secondsLeft, setSecondsLeft] = useState(Math.ceil(BREATH_HALF_MS / 1000));
   const [sceneIndex, setSceneIndex] = useState(0);
@@ -126,15 +127,21 @@ export default function IntroVideoScreen() {
     }
   }, [hasSeenIntro, navigation, setUser, user]);
 
-  // After signup: only skip if THIS account already finished the post-auth welcome.
-  // Guest `welcomeVideoComplete` must not skip the post-signup breathe replay.
+  // Breathe replay is only for a brand-new account that has not finished first-run.
+  // An existing sign-in leaves immediately, without painting "Breathe in".
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
     (async () => {
       const seen = await onboardingStorage.hasSeenWelcomeVideo(user.uid);
-      if (cancelled || !seen) return;
-      finish();
+      const showBreath =
+        !seen && !user.onboardingComplete && isFirstRunAccount(user.createdAt);
+      if (cancelled) return;
+      if (!showBreath) {
+        finish();
+        return;
+      }
+      setStage('breath');
     })();
     return () => {
       cancelled = true;
@@ -329,6 +336,10 @@ export default function IntroVideoScreen() {
     setStage('welcome');
   };
 
+  if (stage === 'hold') {
+    return <View style={styles.root} />;
+  }
+
   const scene = SCENES[sceneIndex];
   const showCinematic = !useVideo || !videoReady;
   const progressWidth = progress.interpolate({
@@ -433,7 +444,7 @@ export default function IntroVideoScreen() {
             <>
               <Animated.View style={[styles.logoStage, { opacity: glow, transform: [{ scale: orb }] }]}>
                 <View style={styles.ring} />
-                <WellnessShiftLogoBadge diameter={120} />
+                <WellnessShiftLogoBadge diameter={188} />
               </Animated.View>
               <Animated.View style={{ opacity: fade, transform: [{ translateY: rise }] }}>
                 <Text style={styles.title}>{scene.title}</Text>
@@ -677,9 +688,9 @@ const styles = StyleSheet.create({
   },
   ring: {
     position: 'absolute',
-    width: 168,
-    height: 168,
-    borderRadius: 84,
+    width: 236,
+    height: 236,
+    borderRadius: 118,
     borderWidth: 1.5,
     borderColor: 'rgba(255, 143, 179, 0.35)',
     backgroundColor: 'rgba(242, 77, 128, 0.06)',

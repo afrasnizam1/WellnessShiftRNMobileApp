@@ -61,7 +61,7 @@
 		<false/>
 		<key>NSExceptionDomains</key>
 		<dict>
-			<key>wellnessshift.co.uk</key>
+			<key>wellnesshift.co.uk</key>
 			<dict>
 				<key>NSIncludesSubdomains</key>
 				<true/>

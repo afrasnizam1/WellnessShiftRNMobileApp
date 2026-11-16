@@ -8,6 +8,7 @@ import type { MainTabParamList } from '../types';
 import { Colors, Typography, Shadow, TAB_ICONS, TabBarMetrics, type IoniconName } from '../theme';
 import { useAppStore } from '../store';
 
+import CarePlanArrivalNotice from '../components/home/CarePlanArrivalNotice';
 import HomeStackNavigator from './stacks/HomeStackNavigator';
 import FitnessStackNavigator from './stacks/FitnessStackNavigator';
 import AIInsightsStackNavigator from './stacks/AIInsightsStackNavigator';
@@ -55,6 +56,8 @@ export function MainTabNavigator() {
   const hasUnseenCarePlan = useAppStore((s) => s.hasUnseenCarePlan);
 
   return (
+    <View style={styles.root}>
+    <CarePlanArrivalNotice />
     <Tab.Navigator
       backBehavior="history"
       screenOptions={({ route }) => ({
@@ -96,8 +99,8 @@ export function MainTabNavigator() {
           const focused = getFocusedRouteNameFromRoute(route) ?? Screen.aiInsightsFeed;
           const hideTab = AI_INSIGHTS_HIDE_TAB.has(focused);
           return {
-            tabBarLabel: 'Ai insights',
-            tabBarAccessibilityLabel: 'Ai insights tab',
+            tabBarLabel: 'Coach',
+            tabBarAccessibilityLabel: 'Wellness Coach tab',
             // Floating tab bar overlays chat/detail input — hide on those screens
             tabBarStyle: hideTab ? { display: 'none' } : styles.tabBar,
             sceneContainerStyle: hideTab ? styles.scene : [styles.scene, styles.sceneWithTab],
@@ -122,10 +125,12 @@ export function MainTabNavigator() {
         />
       )}
     </Tab.Navigator>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   scene: {
     flex: 1,
     backgroundColor: Colors.background,

@@ -2,14 +2,16 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
+import { Colors, Typography, Spacing, Radius, Shadow, tabBarScrollPadding } from '../../theme';
 import AppScreen from '../../components/common/AppScreen';
+import { appConfig } from '../../config/appConfig';
+import { Screen } from '../../navigation/screenNames';
 
 const FAQS = [
-  { q: 'What is my wellness score?', a: 'Your wellness score (0–10) is calculated from your assessment answers, daily task completion, Apple Health data, and AI Insights activity across 10 health categories.' },
-  { q: 'How do I improve my score?', a: 'Complete daily plan tasks, engage with AI Insights, use Fitness Hub modules, and connect Apple Health for automatic activity tracking.' },
-  { q: 'How do I connect my clinician?', a: 'Clinician connection is only for patients who have a health issue and whose GP has referred them to a clinician on Wellness Shift. Ask that clinician for their invite code, then go to My Care → Connect and enter it. If you have not been GP-referred, you can use the rest of the app without linking a clinician.' },
-  { q: 'Who can use clinician features?', a: 'Only patients with a specific health concern who have been referred by their GP. This is not a drop-in booking service for general wellness questions.' },
+  { q: 'What is my wellness score?', a: 'Your wellness score (0–10) is calculated from your assessment answers, daily task completion, Apple Health data, and Wellness Coach activity across 10 health categories.' },
+  { q: 'How do I improve my score?', a: 'Complete daily plan tasks, use Wellness Coach, use Fitness Hub modules, and connect Apple Health for automatic activity tracking.' },
+  { q: 'How do I connect with a professional?', a: 'You can connect with a doctor, clinician, neurosurgeon, physiotherapist, physical therapist, or another registered practitioner who uses Wellness Shift. Ask them for their invite code, then go to My Care → Connect and enter it. You can also use the rest of the app without linking anyone.' },
+  { q: 'Who can use clinician features?', a: 'Anyone with an invite code from a registered practitioner on Wellness Shift can link for care plans and messaging. This is not a directory or a drop-in booking service. You can use the rest of the app without linking anyone.' },
   { q: 'Is my data shared with anyone?', a: 'Your data is only shared with clinicians you explicitly connect with. We never sell or share your health data. See our Privacy Policy for full details.' },
   { q: 'How do I cancel my subscription?', a: 'Cancel anytime via iPhone Settings → Apple ID → Subscriptions → Wellness Shift. You keep access until the period ends.' },
   { q: 'Can I use the app without Apple Health?', a: 'Yes — Apple Health is optional. Connecting it enhances your wellness score with real activity data, but the app works fully without it.' },
@@ -39,11 +41,25 @@ export default function HelpScreen() {
             {expanded === i && <Text style={styles.faqA}>{faq.a}</Text>}
           </TouchableOpacity>
         ))}
-        <TouchableOpacity style={styles.contactCard} onPress={() => Linking.openURL('mailto:support@wellnessshift.co.uk')}>
+        <TouchableOpacity
+          style={styles.contactCard}
+          onPress={() => navigation.navigate(Screen.website, {
+            url: appConfig.supportUrl,
+            title: 'Support',
+          })}
+        >
+          <Text style={styles.contactIcon}>🌐</Text>
+          <View>
+            <Text style={styles.contactTitle}>Support centre</Text>
+            <Text style={styles.contactSub}>wellnesshift.co.uk/support</Text>
+          </View>
+          <Text style={styles.chevron}>›</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.contactCard} onPress={() => Linking.openURL(`mailto:${appConfig.supportEmail}`)}>
           <Text style={styles.contactIcon}>📧</Text>
           <View>
             <Text style={styles.contactTitle}>Still need help?</Text>
-            <Text style={styles.contactSub}>support@wellnessshift.co.uk</Text>
+            <Text style={styles.contactSub}>{appConfig.supportEmail}</Text>
           </View>
           <Text style={styles.chevron}>›</Text>
         </TouchableOpacity>
@@ -59,7 +75,7 @@ const styles = StyleSheet.create({
   backBtn: { width: 40 },
   backText: { fontSize: 32, color: Colors.primary, lineHeight: 38 },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: Typography.size.base, fontWeight: '700', color: Colors.text },
-  content: { padding: Spacing.base, gap: Spacing.sm },
+  content: { padding: Spacing.base, gap: Spacing.sm, paddingBottom: tabBarScrollPadding },
   faqCard: { backgroundColor: Colors.white, borderRadius: Radius.lg, padding: Spacing.base, ...Shadow.sm, gap: Spacing.sm },
   faqHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
   faqQ: { flex: 1, fontSize: Typography.size.base, fontWeight: '600', color: Colors.text },

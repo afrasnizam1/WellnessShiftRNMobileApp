@@ -13,7 +13,7 @@ import type { Edge } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AppScreen from '../common/AppScreen';
 import ScreenHeader from './ScreenHeader';
-import { Spacing } from '../../theme';
+import { Spacing, tabBarScrollPadding } from '../../theme';
 
 type Action = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -132,5 +132,8 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.xs,
   },
-  scrollContent: { paddingBottom: Spacing['2xl'], flexGrow: 1 },
+  scrollContent: {
+    paddingBottom: tabBarScrollPadding,
+    flexGrow: 1,
+  },
 });

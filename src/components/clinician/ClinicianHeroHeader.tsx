@@ -17,6 +17,7 @@ type Props = {
   title: string;
   subtitle?: string;
   eyebrow?: string;
+  onBack?: () => void;
   actions?: Action[];
   children?: React.ReactNode;
   style?: ViewStyle;
@@ -26,6 +27,7 @@ export default function ClinicianHeroHeader({
   title,
   subtitle,
   eyebrow = 'Clinician portal',
+  onBack,
   actions,
   children,
   style,
@@ -35,7 +37,20 @@ export default function ClinicianHeroHeader({
       <SafeAreaView edges={['top']} style={styles.safe}>
         <View style={styles.inner}>
           <View style={styles.topRow}>
-            <Text style={styles.eyebrow}>{eyebrow}</Text>
+            <View style={styles.topLeft}>
+              {onBack ? (
+                <AnimatedPressable
+                  style={styles.backBtn}
+                  onPress={onBack}
+                  accessibilityRole="button"
+                  accessibilityLabel="Back"
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="chevron-back" size={22} color={Colors.text} />
+                </AnimatedPressable>
+              ) : null}
+              <Text style={styles.eyebrow}>{eyebrow}</Text>
+            </View>
             {actions?.length ? (
               <View style={styles.actions}>
                 {actions.map((a) => (
@@ -86,6 +101,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 2,
+  },
+  topLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginRight: Spacing.sm,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.backgroundSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.borderLight,
   },
   eyebrow: {
     fontSize: Typography.size.xs,

@@ -54,7 +54,7 @@ export default function OnboardingMoodScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>How are you feeling right now?</Text>
         <Text style={styles.subtitle}>
-          Optional — one tap helps us tailor your first recommendations and AI insights.
+          Optional — one tap helps us tailor your first recommendations and Wellness Coach guidance.
         </Text>
 
         <MoodOptionGrid

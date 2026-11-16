@@ -1,15 +1,19 @@
 import { CSQ } from '@contentsquare/react-native-bridge';
 import { appConfig } from '../config/appConfig';
+import { firebaseAnalytics } from './firebaseAnalytics';
 import { logger } from '../utils/logger';
 
 type EventProps = Record<string, string | number | boolean>;
 
-function canTrack(): boolean {
+function canTrackCsq(): boolean {
   return appConfig.enableContentsquare;
 }
 
 function trackEvent(eventName: string, properties?: EventProps) {
-  if (!canTrack()) return;
+  // Always send to Firebase Analytics when Firebase is configured.
+  firebaseAnalytics.logEvent(eventName, properties).catch(() => {});
+
+  if (!canTrackCsq()) return;
   if (properties && Object.keys(properties).length > 0) {
     CSQ.trackEvent(eventName, properties);
   } else {
@@ -18,7 +22,7 @@ function trackEvent(eventName: string, properties?: EventProps) {
   logger.log(`📊 CSQ event: ${eventName}`, properties ?? '');
 }
 
-/** Mirrors native AnalyticsHelper CSQ custom events (not Firebase-only helpers). */
+/** Dual-writes Contentsquare + Firebase Analytics custom events. */
 export const analyticsHelper = {
   trackButtonTap: (button: string, screen: string) => {
     trackEvent('button_tap', { button, screen });
@@ -65,5 +69,16 @@ export const analyticsHelper = {
 
   logFunnelSubscription: (tier: string, productId: string) => {
     trackEvent('funnel_subscription_start', { tier, product_id: productId });
+  },
+
+  trackPurposeSelected: (purposes: string[]) => {
+    trackEvent('purpose_selected', {
+      purposes: purposes.join(','),
+      count: purposes.length,
+    });
+  },
+
+  trackOnboardingStep: (step: string) => {
+    trackEvent('onboarding_step', { step });
   },
 };

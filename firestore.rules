@@ -10,9 +10,30 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    /** Signed-in user has a clinicians/{uid} profile (connection / care workflows). */
+    function isClinicianAccount() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/clinicians/$(request.auth.uid));
+    }
+
     function isClinicianForPatient(patientId) {
       return isSignedIn() &&
         get(/databases/$(database)/documents/patients/$(patientId)).data.linkedClinicianId == request.auth.uid;
+    }
+
+    /** Clinician is linked to patient via patients doc or clinicians/.../linkedPatients mirror. */
+    function isLinkedClinicianOf(patientId) {
+      return isSignedIn() && (
+        (
+          exists(/databases/$(database)/documents/patients/$(patientId)) &&
+          get(/databases/$(database)/documents/patients/$(patientId)).data.linkedClinicianId == request.auth.uid
+        ) ||
+        exists(/databases/$(database)/documents/clinicians/$(request.auth.uid)/linkedPatients/$(patientId)) ||
+        (
+          exists(/databases/$(database)/documents/users/$(patientId)) &&
+          get(/databases/$(database)/documents/users/$(patientId)).data.clinicianId == request.auth.uid
+        )
+      );
     }
 
     /** Signed-in user is a patient linked to this clinician (patients or legacy users field). */
@@ -35,9 +56,12 @@ service cloud.firestore {
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['linkedPatients']);
     }
 
-    // RN legacy user profiles — owner or linked clinician only (never any signed-in user)
+    // RN legacy user profiles — owner or linked clinician.
+    // TEMP: isClinicianAccount() allows email lookup until Blaze Cloud Functions deploy
+    // (sendClinicianConnectionRequest). Remove that clause after functions are live.
     match /users/{userId} {
-      allow read: if isOwner(userId) || isClinicianForPatient(userId);
+      allow read: if isOwner(userId) || isClinicianForPatient(userId) || isLinkedClinicianOf(userId)
+        || isClinicianAccount();
       allow create: if isOwner(userId);
       allow update: if isOwner(userId) || isPatientLinkedPatientsPatch(userId);
       allow delete: if isOwner(userId);
@@ -96,8 +120,10 @@ service cloud.firestore {
     }
 
     match /patients/{patientId} {
+      // TEMP: isClinicianAccount() for email connect until Cloud Function is deployed on Blaze.
       allow read: if isOwner(patientId) || isClinicianForPatient(patientId) ||
-        (isSignedIn() && resource.data.linkedClinicianId == request.auth.uid);
+        (isSignedIn() && resource.data.linkedClinicianId == request.auth.uid) ||
+        isLinkedClinicianOf(patientId) || isClinicianAccount();
       allow create: if isOwner(patientId);
       allow update: if isOwner(patientId) || isClinicianForPatient(patientId);
 
@@ -107,8 +133,13 @@ service cloud.firestore {
       }
 
       match /pendingClinicianRequests/{requestId} {
-        allow read: if isOwner(patientId);
-        allow create: if isSignedIn() && request.resource.data.clinicianId == request.auth.uid;
+        allow read: if isOwner(patientId) ||
+          (isSignedIn() && resource.data.clinicianId == request.auth.uid);
+        // Prefer Cloud Function creates; keep clinician create as fallback for offline/dev.
+        allow create: if isClinicianAccount()
+          && request.resource.data.clinicianId == request.auth.uid
+          && request.resource.data.patientId == patientId
+          && request.resource.data.status == 'pending';
         allow update, delete: if isOwner(patientId);
       }
 
@@ -164,9 +195,34 @@ service cloud.firestore {
         resource.data.patientId == request.auth.uid ||
         resource.data.clinicianId == request.auth.uid
       );
-      allow create, update: if isSignedIn() && (
-        request.resource.data.patientId == request.auth.uid ||
-        request.resource.data.clinicianId == request.auth.uid
+      // Only the clinician may create or reopen/close a thread.
+      allow create: if isSignedIn()
+        && request.resource.data.clinicianId == request.auth.uid
+        && request.resource.data.patientId is string
+        && isLinkedClinicianOf(request.resource.data.patientId)
+        && request.resource.data.status == 'open';
+      allow update: if isSignedIn() && (
+        // Clinician can change status / metadata / unread
+        (
+          resource.data.clinicianId == request.auth.uid
+          && request.resource.data.clinicianId == resource.data.clinicianId
+          && request.resource.data.patientId == resource.data.patientId
+        )
+        // Repair a thread that was created without clinician fields
+        || (
+          !('clinicianId' in resource.data)
+          && request.resource.data.clinicianId == request.auth.uid
+          && request.resource.data.patientId is string
+          && request.resource.data.status == 'open'
+          && isLinkedClinicianOf(request.resource.data.patientId)
+        )
+        // Patient may only update unread / last-message fields while thread is not closed
+        || (
+          resource.data.patientId == request.auth.uid
+          && resource.data.status != 'closed'
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['patientUnread', 'updatedAt', 'lastMessage', 'lastMessageAt', 'lastSenderId', 'clinicianUnread'])
+        )
       );
 
       match /messages/{messageId} {
@@ -174,9 +230,15 @@ service cloud.firestore {
           get(/databases/$(database)/documents/messageThreads/$(threadId)).data.patientId == request.auth.uid ||
           get(/databases/$(database)/documents/messageThreads/$(threadId)).data.clinicianId == request.auth.uid
         );
-        allow create: if isSignedIn() &&
-          request.resource.data.senderId == request.auth.uid &&
-          (
+        // Messages only while conversation is open (legacy threads without status stay open).
+        allow create: if isSignedIn()
+          && request.resource.data.senderId == request.auth.uid
+          && (
+            get(/databases/$(database)/documents/messageThreads/$(threadId)).data.status == 'open'
+            || !('status' in get(/databases/$(database)/documents/messageThreads/$(threadId)).data)
+          )
+          && get(/databases/$(database)/documents/messageThreads/$(threadId)).data.status != 'closed'
+          && (
             get(/databases/$(database)/documents/messageThreads/$(threadId)).data.patientId == request.auth.uid ||
             get(/databases/$(database)/documents/messageThreads/$(threadId)).data.clinicianId == request.auth.uid
           );
@@ -189,9 +251,13 @@ service cloud.firestore {
     }
 
     // Lookup-only docs (clinicianId). Full clinician profiles are not readable here.
+    // Codes are unique: update cannot steal another clinician's code.
     match /inviteCodes/{code} {
       allow read: if isSignedIn();
-      allow create, update: if isSignedIn() && request.resource.data.clinicianId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.clinicianId == request.auth.uid;
+      allow update: if isSignedIn()
+        && resource.data.clinicianId == request.auth.uid
+        && request.resource.data.clinicianId == request.auth.uid;
       allow delete: if isSignedIn() && resource.data.clinicianId == request.auth.uid;
     }
 
@@ -218,6 +284,12 @@ service cloud.firestore {
     match /notificationQueue/{queueId} {
       allow create: if isSignedIn();
       allow read, update: if false;
+    }
+
+    // Server-written subscription entitlements (Cloud Function only).
+    match /entitlements/{userId} {
+      allow read: if isOwner(userId);
+      allow create, update, delete: if false;
     }
   }
 }

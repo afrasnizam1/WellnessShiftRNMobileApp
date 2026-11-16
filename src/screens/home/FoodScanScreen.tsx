@@ -7,7 +7,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import AppScreen from '../../components/common/AppScreen';
 import { AppCard, BrandButton, ScreenHeader } from '../../components/ui';
 import NutritionReportCard from '../../components/nutrition/NutritionReportCard';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { useAppStore } from '../../store';
 import {
   analyseFoodPhoto,
@@ -220,7 +220,7 @@ export default function FoodScanScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#EDEAF7' },
   header: { paddingHorizontal: Spacing.base, paddingTop: Spacing.sm },
-  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: Spacing['2xl'] },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   card: { gap: Spacing.md },
   help: { fontSize: Typography.size.sm, color: Colors.textSecondary, lineHeight: 20 },
   row: { flexDirection: 'row', gap: Spacing.sm },

@@ -7,7 +7,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AppScreen from '../../components/common/AppScreen';
 import { AppCard } from '../../components/ui';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { Screen } from '../../navigation/screenNames';
 import { WORKOUTS, EXERCISES, type Workout, type Exercise } from '../../data/workouts';
 
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     padding: Spacing.base, 
     paddingTop: Spacing.xl, 
     gap: Spacing.md, 
-    paddingBottom: Spacing['2xl'] 
+    paddingBottom: tabBarScrollPadding 
   },
   workoutInfoCard: {
     gap: Spacing.md,

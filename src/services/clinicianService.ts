@@ -183,13 +183,21 @@ async function resolvePatientProfile(patientId: string): Promise<UserProfile> {
   throw new Error('Could not load your profile. Please sign out and sign in again.');
 }
 
-async function resolveClinicianName(clinicianId: string): Promise<string> {
+async function resolveClinicianName(clinicianId: string, hint?: string): Promise<string> {
+  const trimmed = hint?.trim();
+  if (trimmed) return trimmed;
+
   const profile = await getProfile(clinicianId);
   if (profile?.displayName) return profile.displayName;
 
-  const clinicianDoc = await firestore().collection('clinicians').doc(clinicianId).get();
-  const data = clinicianDoc.data();
-  return (data?.name as string) ?? 'Your Clinician';
+  try {
+    const clinicianDoc = await firestore().collection('clinicians').doc(clinicianId).get();
+    const data = clinicianDoc.data();
+    return (data?.name as string) || (data?.displayName as string) || 'Your Clinician';
+  } catch (error) {
+    console.warn('[resolveClinicianName] clinician doc unreadable:', error);
+    return 'Your Clinician';
+  }
 }
 
 async function getLatestScore(uid: string): Promise<WellnessScore | null> {
@@ -209,8 +217,57 @@ async function getLatestScore(uid: string): Promise<WellnessScore | null> {
   }
 }
 
+const INVITE_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+const INVITE_CODE_LENGTH = 6;
+const INVITE_CODE_ATTEMPTS = 12;
+
 function generateCode(): string {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
+  let code = '';
+  for (let i = 0; i < INVITE_CODE_LENGTH; i += 1) {
+    code += INVITE_CODE_ALPHABET[Math.floor(Math.random() * INVITE_CODE_ALPHABET.length)];
+  }
+  return code;
+}
+
+/** Strip spaces and force uppercase so "1 o w s z 7" matches the stored code. */
+export function normalizeInviteCode(code: string): string {
+  return String(code ?? '')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toUpperCase();
+}
+
+function snapshotExists(snap: { exists?: boolean | (() => boolean) } | null | undefined): boolean {
+  if (!snap) return false;
+  const flag = snap.exists;
+  if (typeof flag === 'function') return Boolean(flag.call(snap));
+  return Boolean(flag);
+}
+
+/** One reusable code per clinician. Never overwrite another clinician's code. */
+async function mintUniqueInviteCode(clinicianId: string, clinicianName: string): Promise<string> {
+  for (let attempt = 0; attempt < INVITE_CODE_ATTEMPTS; attempt += 1) {
+    const code = generateCode();
+    const ref = firestore().collection('inviteCodes').doc(code);
+    try {
+      const existing = await ref.get();
+      if (snapshotExists(existing) && existing.data()?.clinicianId !== clinicianId) {
+        continue;
+      }
+      await ref.set(
+        {
+          clinicianId,
+          clinicianName,
+          used: false,
+          createdAt: existing.data()?.createdAt ?? fsNow(),
+        },
+        { merge: true },
+      );
+      return code;
+    } catch (error) {
+      console.warn('[mintUniqueInviteCode] attempt failed:', code, error);
+    }
+  }
+  throw new Error('Could not generate a unique invite code. Try again.');
 }
 
 /** Copy for the post-link success alert. */
@@ -307,29 +364,43 @@ export const clinicianService = {
   ensureInviteCode: async (clinicianId: string): Promise<string> => {
     await clinicianService.ensureClinicianDoc(clinicianId);
     const doc = await firestore().collection('clinicians').doc(clinicianId).get();
-    const existing = doc.data()?.clinicianInviteCode as string | undefined;
-    if (existing) return existing;
+    const data = doc.data();
+    const existing = normalizeInviteCode(String(data?.clinicianInviteCode ?? ''));
+    const profile = await getProfile(clinicianId);
+    const clinicianName =
+      profile?.displayName ||
+      (data?.name as string) ||
+      (data?.displayName as string) ||
+      'Clinician';
 
-    const code = existing ?? generateCode();
-    const now = fsNow();
-    if (!existing) {
-      await firestore().collection('clinicians').doc(clinicianId).set(
-        {
-          clinicianInviteCode: code,
-          clinicianInviteCodeUpdatedAt: now,
-          lastUpdated: now,
-        },
-        { merge: true }
-      );
+    if (existing.length >= 4) {
+      const lookup = await firestore().collection('inviteCodes').doc(existing).get();
+      const owner = snapshotExists(lookup)
+        ? (lookup.data()?.clinicianId as string | undefined)
+        : undefined;
+      if (!owner || owner === clinicianId) {
+        await firestore().collection('inviteCodes').doc(existing).set(
+          {
+            clinicianId,
+            clinicianName,
+            used: false,
+            createdAt: lookup.data()?.createdAt ?? fsNow(),
+          },
+          { merge: true },
+        );
+        return existing;
+      }
     }
-    // Public lookup index — patients cannot read clinicians/{id} until they are linked.
-    await firestore().collection('inviteCodes').doc(code).set(
+
+    const code = await mintUniqueInviteCode(clinicianId, clinicianName);
+    const now = fsNow();
+    await firestore().collection('clinicians').doc(clinicianId).set(
       {
-        clinicianId,
-        used: false,
-        createdAt: now,
+        clinicianInviteCode: code,
+        clinicianInviteCodeUpdatedAt: now,
+        lastUpdated: now,
       },
-      { merge: true }
+      { merge: true },
     );
     return code;
   },
@@ -337,15 +408,24 @@ export const clinicianService = {
   /** @deprecated Use ensureInviteCode — kept for compatibility */
   generateInviteCode: async (clinicianId: string) => clinicianService.ensureInviteCode(clinicianId),
 
-  findClinicianByInviteCode: async (code: string): Promise<string | null> => {
+  findClinicianByInviteCode: async (
+    code: string,
+  ): Promise<{ clinicianId: string; clinicianName?: string } | null> => {
     const normalized = normalizeInviteCode(code);
     if (normalized.length < 4) return null;
 
     try {
       const lookup = await firestore().collection('inviteCodes').doc(normalized).get();
-      if (lookup.exists()) {
+      if (snapshotExists(lookup)) {
         const data = lookup.data();
-        if (data?.clinicianId && !data.used) return data.clinicianId as string;
+        const clinicianId = data?.clinicianId as string | undefined;
+        // Codes stay reusable so one clinician can connect many patients.
+        if (clinicianId) {
+          return {
+            clinicianId,
+            clinicianName: (data?.clinicianName as string | undefined) || undefined,
+          };
+        }
       }
     } catch (error) {
       console.warn('[findClinicianByInviteCode] inviteCodes lookup failed:', error);
@@ -357,7 +437,13 @@ export const clinicianService = {
         .where('clinicianInviteCode', '==', normalized)
         .limit(1)
         .get();
-      if (!byMain.empty) return byMain.docs[0].id;
+      if (!byMain.empty) {
+        const hit = byMain.docs[0];
+        return {
+          clinicianId: hit.id,
+          clinicianName: (hit.data()?.name as string | undefined) || undefined,
+        };
+      }
     } catch (error) {
       console.warn('[findClinicianByInviteCode] clinicians query failed:', error);
     }
@@ -365,12 +451,27 @@ export const clinicianService = {
     return null;
   },
 
-  linkPatientToClinician: async (patientId: string, clinicianId: string) => {
+  linkPatientToClinician: async (
+    patientId: string,
+    clinicianId: string,
+    clinicianNameHint?: string,
+  ) => {
     await ensureAuthReadyForUid(patientId);
+
+    // Idempotent — never create a second link / welcome plan for the same pair.
+    const already = await clinicianService.isPatientLinkedToClinician(patientId, clinicianId);
+    if (already) {
+      return clinicianId;
+    }
+
+    const existingLink = await clinicianService.getPatientLinkStatus(patientId);
+    if (existingLink && existingLink !== clinicianId) {
+      throw new Error('This patient is already linked to another clinician.');
+    }
 
     const [patientProfile, clinicianName] = await Promise.all([
       resolvePatientProfile(patientId),
-      resolveClinicianName(clinicianId),
+      resolveClinicianName(clinicianId, clinicianNameHint),
     ]);
 
     const now = new Date().toISOString();
@@ -457,17 +558,22 @@ export const clinicianService = {
 
   connectWithCode: async (patientId: string, code: string) => {
     await ensureAuthReadyForUid(patientId);
-    const clinicianId = await clinicianService.findClinicianByInviteCode(code);
-    if (!clinicianId) throw new Error('Invalid invite code');
+    const found = await clinicianService.findClinicianByInviteCode(code);
+    if (!found) throw new Error('Invalid invite code');
+    const { clinicianId, clinicianName } = found;
     if (clinicianId === patientId) throw new Error('You cannot link to yourself');
 
-    const patientDoc = await firestore().collection('patients').doc(patientId).get();
-    const existing = patientDoc.data()?.linkedClinicianId as string | undefined;
+    if (await clinicianService.isPatientLinkedToClinician(patientId, clinicianId)) {
+      await clinicianService.ensureLinkedPatientMirrors(patientId, clinicianId).catch(() => {});
+      return clinicianId;
+    }
+
+    const existing = await clinicianService.getPatientLinkStatus(patientId);
     if (existing && existing !== clinicianId) {
       throw new Error('You are already linked to another clinician. Disconnect first.');
     }
 
-    return clinicianService.linkPatientToClinician(patientId, clinicianId);
+    return clinicianService.linkPatientToClinician(patientId, clinicianId, clinicianName);
   },
 
   disconnectPatient: async (patientId: string, clinicianId: string) => {
@@ -559,6 +665,29 @@ export const clinicianService = {
       }));
     }
 
+    // users.clinicianId mirror — catches links that never wrote patients.linkedClinicianId
+    if (linked.length === 0) {
+      try {
+        const byUserLink = await firestore()
+          .collection('users')
+          .where('clinicianId', '==', clinicianId)
+          .get();
+        if (!byUserLink.empty) {
+          linked = byUserLink.docs.map((doc) => {
+            const data = doc.data() as UserProfile;
+            return {
+              patientId: doc.id,
+              patientName: data.displayName ?? '',
+              patientEmail: data.email ?? '',
+              linkedAt: data.createdAt ?? new Date().toISOString(),
+            } satisfies LinkedPatient;
+          });
+        }
+      } catch (error) {
+        console.warn('[fetchLinkedPatients] users.clinicianId query failed:', error);
+      }
+    }
+
     const summaries = await Promise.all(
       linked.map(async (lp) => {
         const profile = await getProfile(lp.patientId);
@@ -592,10 +721,12 @@ export const clinicianService = {
       })
     );
 
-    return summaries.sort((a, b) => {
-      if (a.needsAttention !== b.needsAttention) return a.needsAttention ? -1 : 1;
-      return a.wellnessScore - b.wellnessScore;
-    });
+    return summaries
+      .filter((s, index, arr) => arr.findIndex((x) => x.uid === s.uid) === index)
+      .sort((a, b) => {
+        if (a.needsAttention !== b.needsAttention) return a.needsAttention ? -1 : 1;
+        return a.wellnessScore - b.wellnessScore;
+      });
   },
 
   watchLinkedPatients: (clinicianId: string, cb: (patients: PatientSummary[]) => void) => {
@@ -1001,6 +1132,88 @@ export const clinicianService = {
     return clinicianId ?? null;
   },
 
+  /** True if this patient is already linked to this clinician (any mirror). */
+  isPatientLinkedToClinician: async (patientId: string, clinicianId: string): Promise<boolean> => {
+    try {
+      const linkedTo = await clinicianService.getPatientLinkStatus(patientId);
+      if (linkedTo === clinicianId) return true;
+    } catch (error) {
+      console.warn('[isPatientLinkedToClinician] link status failed:', error);
+    }
+
+    try {
+      const mirror = await firestore()
+        .collection('clinicians')
+        .doc(clinicianId)
+        .collection('linkedPatients')
+        .doc(patientId)
+        .get();
+      if (snapshotExists(mirror)) return true;
+    } catch (error) {
+      console.warn('[isPatientLinkedToClinician] mirror read failed:', error);
+    }
+
+    return false;
+  },
+
+  /**
+   * Repairs clinician-owned link mirrors so the patient appears on the Patients list.
+   * Patient-owned fields are best-effort (rules may block until the patient is fully linked).
+   */
+  ensureLinkedPatientMirrors: async (patientId: string, clinicianId: string) => {
+    const [patientProfile, clinicianName] = await Promise.all([
+      resolvePatientProfile(patientId),
+      resolveClinicianName(clinicianId),
+    ]);
+    const now = new Date().toISOString();
+    const score = await getLatestScore(patientId).catch(() => null);
+
+    // Clinician-owned mirror — this is what the Patients tab watches.
+    await firestore()
+      .collection('clinicians')
+      .doc(clinicianId)
+      .collection('linkedPatients')
+      .doc(patientId)
+      .set(
+        {
+          patientId,
+          patientName: patientProfile.displayName,
+          patientEmail: patientProfile.email,
+          linkedAt: fsTimestampFromIso(now),
+          latestOverallScore: score?.overall ?? 0,
+          patientStatus: 'active',
+        },
+        { merge: true },
+      );
+
+    await firestore()
+      .collection('users')
+      .doc(clinicianId)
+      .set({ linkedPatients: firestore.FieldValue.arrayUnion(patientId) }, { merge: true })
+      .catch((error) => console.warn('[ensureLinkedPatientMirrors] array union failed:', error));
+
+    // Patient-owned fields — may fail if rules require an existing link.
+    await firestore()
+      .collection('patients')
+      .doc(patientId)
+      .set(
+        {
+          linkedClinicianId: clinicianId,
+          linkedClinicianName: clinicianName,
+          linkedClinicianAt: fsNow(),
+          lastUpdated: fsNow(),
+        },
+        { merge: true },
+      )
+      .catch((error) => console.warn('[ensureLinkedPatientMirrors] patient doc failed:', error));
+
+    await firestore()
+      .collection('users')
+      .doc(patientId)
+      .set({ clinicianId }, { merge: true })
+      .catch((error) => console.warn('[ensureLinkedPatientMirrors] user clinicianId failed:', error));
+  },
+
   getLatestFitnessHubRecommendations: async (
     patientId: string
   ): Promise<FitnessHubRecommendation | null> => {
@@ -1150,15 +1363,80 @@ export const clinicianService = {
     return { ...profile, uid: snap.docs[0].id };
   },
 
-  sendConnectionRequest: async (clinicianId: string, patientEmail: string) => {
+  sendConnectionRequest: async (
+    clinicianId: string,
+    patientEmail: string,
+  ): Promise<ConnectionRequest & { alreadyLinked?: boolean }> => {
+    // Prefer Admin lookup via Cloud Function (no broad client patient reads).
+    try {
+      const { cloudFunctions } = await import('./cloudFunctions');
+      const remote = await cloudFunctions.sendClinicianConnectionRequest(patientEmail);
+      if (remote?.alreadyLinked) {
+        try {
+          await clinicianService.ensureLinkedPatientMirrors(remote.patientId, clinicianId);
+        } catch (error) {
+          console.warn('[sendConnectionRequest] local mirror repair failed:', error);
+        }
+        return {
+          id: 'already-linked',
+          clinicianId,
+          clinicianName: remote.clinicianName ?? 'Clinician',
+          patientId: remote.patientId,
+          patientName: '',
+          patientEmail: patientEmail.trim().toLowerCase(),
+          requestedAt: new Date().toISOString(),
+          status: 'approved',
+          alreadyLinked: true,
+        };
+      }
+      if (remote && !remote.alreadyLinked && remote.request) {
+        return remote.request;
+      }
+    } catch (error: any) {
+      const code = String(error?.code ?? '');
+      const message = String(error?.message ?? error);
+      if (
+        code.includes('not-found') ||
+        code.includes('already-exists') ||
+        code.includes('failed-precondition') ||
+        code.includes('permission-denied') ||
+        code.includes('invalid-argument') ||
+        message.includes('No patient') ||
+        message.includes('already linked') ||
+        message.includes('pending request')
+      ) {
+        throw new Error(message.replace(/^Firebase: /i, '').replace(/\s*\(.*\)$/, '').trim() || 'Could not send connection request.');
+      }
+      console.warn('[sendConnectionRequest] callable failed, trying client path:', error);
+    }
+
     const clinician = await getProfile(clinicianId);
     if (!clinician) throw new Error('Clinician profile not found');
 
     const patient = await clinicianService.searchPatientByEmail(patientEmail);
     if (!patient) throw new Error('No patient account found with that email.');
 
+    if (await clinicianService.isPatientLinkedToClinician(patient.uid, clinicianId)) {
+      try {
+        await clinicianService.ensureLinkedPatientMirrors(patient.uid, clinicianId);
+      } catch (error) {
+        console.warn('[sendConnectionRequest] mirror repair failed:', error);
+      }
+      return {
+        id: 'already-linked',
+        clinicianId,
+        clinicianName: clinician.displayName,
+        patientId: patient.uid,
+        patientName: patient.displayName,
+        patientEmail: patient.email,
+        requestedAt: new Date().toISOString(),
+        status: 'approved',
+        alreadyLinked: true,
+      };
+    }
+
     const linked = await clinicianService.getPatientLinkStatus(patient.uid);
-    if (linked) throw new Error('This patient is already linked to a clinician.');
+    if (linked) throw new Error('This patient is already linked to another clinician.');
 
     const existing = await firestore()
       .collection('patients')
@@ -1181,8 +1459,6 @@ export const clinicianService = {
       requestedAt: now,
       status: 'pending',
     };
-
-    await syncPatientUserDoc(patient.uid, patient);
 
     await firestore()
       .collection('patients')
@@ -1231,6 +1507,23 @@ export const clinicianService = {
     const doc = await ref.get();
     if (!doc.exists()) throw new Error('Request not found');
     const request = doc.data() as ConnectionRequest;
+
+    if (await clinicianService.isPatientLinkedToClinician(patientId, request.clinicianId)) {
+      await ref.delete().catch(() => {});
+      await firestore()
+        .collection('clinicians')
+        .doc(request.clinicianId)
+        .collection('outgoingRequests')
+        .doc(requestId)
+        .delete()
+        .catch(() => {});
+      return request.clinicianId;
+    }
+
+    const existingLink = await clinicianService.getPatientLinkStatus(patientId);
+    if (existingLink && existingLink !== request.clinicianId) {
+      throw new Error('You are already linked to another clinician. Disconnect first.');
+    }
 
     await clinicianService.linkPatientToClinician(patientId, request.clinicianId);
     await ref.delete();

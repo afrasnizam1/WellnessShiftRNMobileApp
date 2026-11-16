@@ -8,13 +8,14 @@ import {
   Image,
   Platform,
   Alert,
+  Linking,
   useWindowDimensions,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
+import { Colors, Typography, Spacing, Radius, Shadow, tabBarScrollPadding } from '../../theme';
 import { getHealthPlatformName, healthKitService } from '../../services/healthkit';
 import { analyticsHelper } from '../../services/analyticsHelper';
 import { Screen } from '../../navigation/screenNames';
@@ -232,10 +233,24 @@ export default function HealthKitPermissionScreen() {
         Alert.alert(
           `${platformName} unavailable`,
           Platform.OS === 'ios'
-            ? 'Apple Health is not available on this device.'
-            : 'Install or update Health Connect from the Play Store, then try again.'
+            ? 'Apple Health is not available on this device. On a simulator, open the Health app once, then try again.'
+            : 'Install or update Health Connect from the Play Store, then try again.',
+          Platform.OS === 'android'
+            ? [
+                { text: 'Not now', style: 'cancel' },
+                {
+                  text: 'Open Play Store',
+                  onPress: () => {
+                    Linking.openURL('market://details?id=com.google.android.apps.healthdata').catch(() =>
+                      Linking.openURL(
+                        'https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata',
+                      ),
+                    );
+                  },
+                },
+              ]
+            : [{ text: 'OK' }],
         );
-        if (!isReconnect) await leaveScreen();
         return;
       }
 
@@ -244,13 +259,32 @@ export default function HealthKitPermissionScreen() {
         analyticsHelper.trackHealthKitConnected();
         await leaveScreen();
       } else {
+        const detail = healthKitService.getLastConnectError();
+        const needsStore =
+          Platform.OS === 'android' && /Play Store/i.test(detail ?? '');
         Alert.alert(
-          'Permission needed',
-          Platform.OS === 'ios'
-            ? 'Open Settings → Health → Data Access & Devices → Wellness Shift and turn on the data types you want to share.'
-            : `Allow Wellness Shift to read your ${platformName} data in the Health Connect app.`
+          'Could not connect',
+          detail
+            ? detail
+            : Platform.OS === 'ios'
+              ? 'Open Settings → Health → Data Access & Devices → Wellness Shift and turn on the data types you want to share.'
+              : `Allow Wellness Shift to read your ${platformName} data in the Health Connect app.`,
+          needsStore
+            ? [
+                { text: 'Not now', style: 'cancel' },
+                {
+                  text: 'Open Play Store',
+                  onPress: () => {
+                    Linking.openURL('market://details?id=com.google.android.apps.healthdata').catch(() =>
+                      Linking.openURL(
+                        'https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata',
+                      ),
+                    );
+                  },
+                },
+              ]
+            : [{ text: 'OK' }],
         );
-        if (!isReconnect) await leaveScreen();
       }
     } catch {
       Alert.alert('Connection failed', `Could not connect to ${platformName}. Please try again.`);
@@ -328,7 +362,7 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     paddingHorizontal: Spacing.xl,
-    paddingBottom: Spacing['2xl'],
+    paddingBottom: tabBarScrollPadding,
   },
   topBar: {
     paddingTop: Spacing.xs,

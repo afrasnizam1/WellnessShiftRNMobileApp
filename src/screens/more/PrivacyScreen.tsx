@@ -2,7 +2,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import AppScreen from '../../components/common/AppScreen';
 import { appConfig } from '../../config/appConfig';
 import { Screen } from '../../navigation/screenNames';
@@ -34,7 +34,7 @@ export default function PrivacyScreen() {
             title: 'Privacy Policy',
           })}
         >
-          <Text style={styles.webLinkText}>View website policy at wellnessshift.co.uk →</Text>
+          <Text style={styles.webLinkText}>View website policy at wellnesshift.co.uk →</Text>
         </TouchableOpacity>
         <Text style={styles.webNote}>
           The in-app policy above is the mobile-specific disclosure (HealthKit, IAP, Crashlytics, Contentsquare). Keep the website policy aligned before App Store review.
@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
   backBtn: { width: 40 },
   backText: { fontSize: 32, color: Colors.primary, lineHeight: 38 },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: Typography.size.base, fontWeight: '700', color: Colors.text },
-  content: { padding: Spacing.base, gap: Spacing.lg },
+  content: { padding: Spacing.base, gap: Spacing.lg, paddingBottom: tabBarScrollPadding },
   updated: { fontSize: Typography.size.xs, color: Colors.textTertiary },
   section: { gap: Spacing.xs },
   sectionTitle: { fontSize: Typography.size.base, fontWeight: '700', color: Colors.text },

@@ -204,6 +204,11 @@ export default function ClinicianDashboardScreen() {
                   icon: 'people-outline',
                   color: ClinicianTheme.accent,
                   bg: ClinicianTheme.accentSoft,
+                  onPress: () =>
+                    navigation.navigate(Screen.clinicianTabs, {
+                      screen: Screen.patients,
+                      params: { attentionOnly: false },
+                    }),
                 },
                 {
                   label: 'Attention',
@@ -212,6 +217,11 @@ export default function ClinicianDashboardScreen() {
                   color: Colors.error,
                   bg: Colors.errorLight,
                   alert: attentionPatients.length > 0,
+                  onPress: () =>
+                    navigation.navigate(Screen.clinicianTabs, {
+                      screen: Screen.patients,
+                      params: { attentionOnly: true },
+                    }),
                 },
                 {
                   label: 'Unread',

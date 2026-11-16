@@ -12,12 +12,14 @@ type CsqGlobal = typeof globalThis & { __csqStarted?: boolean };
 
 let started = false;
 let analyticsActive = false;
+let initPromise: Promise<void> | null = null;
 let metadataUnsubscribe: (() => void) | null | undefined = null;
 let replayLinkUnsubscribe: (() => void) | null | undefined = null;
 let linkingUnsubscribe: (() => void) | null = null;
 let lastScreenview: string | null = null;
-/** Queued while opt-in is still resolving — CSQ discards events without a prior screenview. */
+/** Queued while opt-in is still resolving — CSQ discards replay without a screenview. */
 let pendingScreenview: string | null = null;
+let replayRetryTimer: ReturnType<typeof setTimeout> | null = null;
 
 function sdkAlreadyStarted(): boolean {
   return started || !!(global as CsqGlobal).__csqStarted;
@@ -32,17 +34,30 @@ function canUseContentsquare(): boolean {
   return appConfig.enableContentsquare && hasContentsquareStartId();
 }
 
-function triggerSessionReplayBootstrap(): void {
-  try {
-    CSQ.triggerReplayForCurrentSession('session_bootstrap');
-  } catch (e) {
-    console.warn('[CSQ] triggerReplayForCurrentSession failed:', e);
+function currentScreenName(): string | null {
+  return pendingScreenview ?? lastScreenview;
+}
+
+/**
+ * Contentsquare drops the replay unless a screenview is sent after the recorder starts.
+ * Navigation dedupes the same route, so this resend has to come from here.
+ */
+function publishScreenview(screenview: string): void {
+  lastScreenview = screenview;
+  pendingScreenview = screenview;
+  CSQ.trackScreenview(screenview);
+  if (__DEV__) {
+    logger.log(`[CSQ] screenview: ${screenview}`);
   }
 }
 
-/** Opt-in + start Session Replay (iOS & Android). Safe to call repeatedly. */
+/**
+ * Start the recorder. `sessionReplayAutoStart` is false at SDK start so this is the
+ * only path that records. Do not call stopSessionReplay — that is terminal for the
+ * process, and an unmatched triggerReplay name does not upload a replay.
+ */
 function ensureSessionReplayRunning(reason: string): void {
-  if (!appConfig.contentsquareSessionReplayAutoStart) return;
+  if (!appConfig.contentsquareSessionReplayAutoStart || !analyticsActive) return;
 
   try {
     CSQ.startSessionReplay();
@@ -50,7 +65,31 @@ function ensureSessionReplayRunning(reason: string): void {
   } catch (e) {
     console.warn(`[CSQ] startSessionReplay failed (${reason}):`, e);
   }
-  triggerSessionReplayBootstrap();
+
+  const screen = currentScreenName();
+  if (!screen) return;
+  lastScreenview = null;
+  publishScreenview(screen);
+}
+
+function scheduleSessionReplay(reason: string): void {
+  if (replayRetryTimer) {
+    clearTimeout(replayRetryTimer);
+    replayRetryTimer = null;
+  }
+  ensureSessionReplayRunning(reason);
+  // Android posts start/optIn onto the UI thread. A call that lands before CSQ.start
+  // finishes is ignored, so retry once after the native start has settled.
+  replayRetryTimer = setTimeout(() => {
+    replayRetryTimer = null;
+    ensureSessionReplayRunning(`${reason}_retry`);
+  }, Platform.OS === 'android' ? 800 : 400);
+}
+
+function cancelScheduledReplay(): void {
+  if (!replayRetryTimer) return;
+  clearTimeout(replayRetryTimer);
+  replayRetryTimer = null;
 }
 
 /**
@@ -88,21 +127,12 @@ async function activateAnalytics(user?: UserProfile | null, userInitiated = fals
     console.warn('[CSQ] setDefaultMasking failed:', e);
   }
 
-  // sessionReplayAutoStart covers SDK start; startSessionReplay covers post-opt-in activation.
-  // Android sometimes needs a short deferred retry after optIn settles.
-  ensureSessionReplayRunning('opt_in');
-  setTimeout(() => ensureSessionReplayRunning('opt_in_retry'), Platform.OS === 'android' ? 600 : 250);
+  // Auto-start is off so opt-out users never record. After optIn, start the recorder
+  // and send the current screen — CSQ will not upload a replay without that screenview.
+  scheduleSessionReplay('opt_in');
 
   if (user) {
     contentsquareService.identifyUser(user);
-  }
-
-  // Flush any screenview that fired before opt-in finished (otherwise CSQ drops touches).
-  if (pendingScreenview) {
-    const screen = pendingScreenview;
-    pendingScreenview = null;
-    lastScreenview = null;
-    contentsquareService.trackNavigationScreenview(screen);
   }
 
   logger.log(`[CSQ] analytics active on ${Platform.OS} — autocapture + session replay on`);
@@ -112,39 +142,18 @@ async function deactivateAnalytics(userInitiated = false): Promise<void> {
   if (!canUseContentsquare()) return;
 
   analyticsActive = false;
-  lastScreenview = null;
+  cancelScheduledReplay();
   if (userInitiated) {
     await contentsquareStorage.setUserPreference(false);
   }
 
   contentsquareService.clearUserIdentity();
-  try {
-    CSQ.stopSessionReplay();
-  } catch (e) {
-    console.warn('[CSQ] stopSessionReplay failed:', e);
-  }
+  // optOut stops collection. stopSessionReplay cannot be started again in this process,
+  // so a later Profile opt-in would never upload a replay until the app was killed.
   CSQ.optOut();
 }
 
-async function bootstrapAnalytics(): Promise<void> {
-  if (!canUseContentsquare()) return;
-
-  // Explicit Profile opt-out — stay off.
-  if (!(await shouldCollectAnalytics())) {
-    analyticsActive = false;
-    try {
-      CSQ.optOut();
-    } catch {
-      /* SDK may not be ready for optOut before start completes */
-    }
-    return;
-  }
-
-  // Explicit opt-in only — default is off until Profile enables analytics.
-  await activateAnalytics();
-}
-
-function analyticsOptions(): AnalyticsOptions {
+function analyticsOptions(autoStartReplay: boolean): AnalyticsOptions {
   return {
     // Touches/interactions only — screenviews come from React Navigation → trackNavigationScreenview.
     enableRNAutocapture: true,
@@ -156,12 +165,14 @@ function analyticsOptions(): AnalyticsOptions {
     enablePushNotificationAutocapture: true,
     enablePushNotificationTitleAutocapture: true,
     enablePushNotificationBodyAutocapture: true,
-    sessionReplayAutoStart: false, // only after Profile opt-in via ensureSessionReplayRunning
+    // Only arm the native recorder when this launch already has an explicit opt-in.
+    // Otherwise startSessionReplay after Profile opt-in is the start path.
+    sessionReplayAutoStart: autoStartReplay,
   };
 }
 
-function buildStartConfig() {
-  const options = analyticsOptions();
+function buildStartConfig(autoStartReplay: boolean) {
+  const options = analyticsOptions(autoStartReplay);
   if (contentsquareConfig.dataSourceId) {
     return StartConfig.withDataSourceId(contentsquareConfig.dataSourceId, options);
   }
@@ -224,7 +235,7 @@ function attachInAppFeatureUrlHandling(): void {
         CSQ.optIn();
         analyticsActive = true;
         CSQ.handleUrl(url);
-        ensureSessionReplayRunning('in_app_features');
+        scheduleSessionReplay('in_app_features');
         if (__DEV__) {
           logger.log('[CSQ] handleUrl:', url);
         }
@@ -261,25 +272,44 @@ function attachInAppFeatureUrlHandling(): void {
 
 export const contentsquareService = {
   init: () => {
-    if (!canUseContentsquare()) {
-      started = true;
-      return;
-    }
+    if (!initPromise) {
+      initPromise = (async () => {
+        if (!canUseContentsquare()) {
+          started = true;
+          return;
+        }
 
-    if (!sdkAlreadyStarted()) {
-      CSQ.start(buildStartConfig());
-      CSQ.setDefaultMasking(appConfig.contentsquareDefaultMasking);
-      // Do not start replay until the user opts in (bootstrapAnalytics / Profile).
-      void bootstrapAnalytics();
-      attachDebugLogging();
-      markSdkStarted();
-    }
+        if (!sdkAlreadyStarted()) {
+          // Read Profile consent before start. Opting out first, then starting replay,
+          // leaves the native SDK opted out for this process and the replay is never uploaded.
+          const collect = await shouldCollectAnalytics();
+          // Keep auto-start off. startSessionReplay() is ignored unless auto-start was
+          // disabled, and it is a no-op while the SDK is still opted out.
+          CSQ.start(buildStartConfig(false));
+          CSQ.setDefaultMasking(appConfig.contentsquareDefaultMasking);
+          attachDebugLogging();
+          markSdkStarted();
 
-    // Always (re)attach — Snapshot Capture QR deeplinks must reach CSQ.handleUrl.
-    attachInAppFeatureUrlHandling();
+          if (!collect) {
+            analyticsActive = false;
+            try {
+              CSQ.optOut();
+            } catch {
+              /* SDK may not be ready for optOut before start completes */
+            }
+          } else {
+            await activateAnalytics();
+          }
+        }
+
+        // Snapshot Capture QR deeplinks must reach CSQ.handleUrl after start.
+        attachInAppFeatureUrlHandling();
+      })();
+    }
+    return initPromise;
   },
 
-  isAnalyticsEnabled: async () => analyticsActive || (await contentsquareStorage.isEnabled()),
+  isAnalyticsEnabled: async () => analyticsActive || (await shouldCollectAnalytics()),
 
   identifyUser: (user: UserProfile) => {
     if (!canUseContentsquare()) return;
@@ -299,6 +329,7 @@ export const contentsquareService = {
   },
 
   setAnalyticsEnabled: async (enabled: boolean, user?: UserProfile | null, userInitiated = false) => {
+    await contentsquareService.init();
     if (!canUseContentsquare()) return;
 
     if (enabled) {
@@ -319,6 +350,7 @@ export const contentsquareService = {
   syncAnalyticsForUser: async (user: UserProfile | null, authLoading = false) => {
     if (!canUseContentsquare()) return;
     if (authLoading) return;
+    await contentsquareService.init();
 
     // Explicit Profile opt-out wins over everything else.
     if (!(await shouldCollectAnalytics(user))) {
@@ -336,6 +368,7 @@ export const contentsquareService = {
   },
 
   onAuthSuccess: async (user: UserProfile) => {
+    await contentsquareService.init();
     if (!canUseContentsquare()) return;
 
     if (await shouldCollectAnalytics(user)) {
@@ -349,7 +382,7 @@ export const contentsquareService = {
     if (!canUseContentsquare() || !screenview) return;
 
     if (!analyticsActive) {
-      // Hold until optIn completes — without a screenview, CSQ discards taps/gestures.
+      // Hold until optIn completes — without a screenview, CSQ discards the replay.
       pendingScreenview = screenview;
       if (__DEV__) {
         logger.log(`[CSQ] screenview queued (waiting for opt-in): ${screenview}`);
@@ -361,13 +394,7 @@ export const contentsquareService = {
     // React Navigation emits many onStateChange events for the same leaf route
     // (focus, nested stack updates, tab blur). A time window still double-counted.
     if (lastScreenview === screenview) return;
-    lastScreenview = screenview;
-    pendingScreenview = null;
-
-    CSQ.trackScreenview(screenview);
-    if (__DEV__) {
-      logger.log(`[CSQ] screenview: ${screenview}`);
-    }
+    publishScreenview(screenview);
   },
 
   trackSubscriptionPurchase: (

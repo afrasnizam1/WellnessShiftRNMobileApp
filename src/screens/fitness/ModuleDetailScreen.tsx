@@ -3,15 +3,14 @@ import React from 'react';
 import { Screen } from '../../navigation/screenNames';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius, Shadow, fitnessModuleIonIcon } from '../../theme';
+import { Colors, Typography, Spacing, Radius, Shadow, fitnessModuleIonIcon, tabBarScrollPadding } from '../../theme';
 import type { FitnessModule } from '../../types';
 import { useAppStore } from '../../store';
-import { navigateToFitnessModule } from '../../utils/fitnessModuleRouter';
+import { isFitnessModuleLocked, navigateToFitnessModule, paywallFeatureForModule } from '../../utils/fitnessModuleRouter';
 import { getModulePreview } from '../../data/moduleContentPreview';
 import AppScreen from '../../components/common/AppScreen';
 import { BackButton, IconBadge } from '../../components/ui';
 import FuturisticModuleGlyph, { hasFuturisticGlyph } from '../../components/fitness/FuturisticModuleGlyph';
-import { getEffectiveTier } from '../../services/iap';
 
 export default function ModuleDetailScreen() {
   const navigation = useNavigation<any>();
@@ -21,7 +20,7 @@ export default function ModuleDetailScreen() {
   if (!module) return null;
 
   const preview = getModulePreview(module);
-  const locked = !!module.isPremium && getEffectiveTier(subscriptionTier) === 'free';
+  const locked = isFitnessModuleLocked(module, subscriptionTier);
 
   const handleStart = () => {
     navigateToFitnessModule(navigation, module, subscriptionTier);
@@ -83,7 +82,7 @@ export default function ModuleDetailScreen() {
 
         <TouchableOpacity
           style={[styles.startBtn, { backgroundColor: module.color }]}
-          onPress={locked ? () => navigation.navigate(Screen.subscriptionPaywall, { feature: module.id }) : handleStart}
+          onPress={locked ? () => navigation.navigate(Screen.subscriptionPaywall, { feature: paywallFeatureForModule(module) }) : handleStart}
         >
           <Text style={styles.startBtnText}>{locked ? 'Unlock with PRO' : 'Start'}</Text>
         </TouchableOpacity>
@@ -108,7 +107,7 @@ const styles = StyleSheet.create({
     color: Colors.text,
     letterSpacing: -0.3,
   },
-  content: { padding: Spacing.base, gap: Spacing.base, paddingBottom: Spacing['3xl'] },
+  content: { padding: Spacing.base, gap: Spacing.base, paddingBottom: tabBarScrollPadding },
   hero: {
     alignItems: 'center',
     padding: Spacing.xl,

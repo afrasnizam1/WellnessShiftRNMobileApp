@@ -74,8 +74,8 @@ export const PARITY_BACKLOG: ParityItem[] = [
     title: 'Production AI health coach',
     nativeRef: 'AIHealthCoachView',
     priority: 'high',
-    status: 'planned',
-    notes: 'RN uses mock responses in ai.ts',
+    status: 'done',
+    notes: 'Shipped as rule-based Wellness Coach (legal disclosure); not generative AI',
   },
   {
     id: 'ai-insights-feed',
@@ -93,7 +93,7 @@ export const PARITY_BACKLOG: ParityItem[] = [
     nativeRef: 'BarcodeScannerView',
     priority: 'high',
     status: 'planned',
-    notes: 'Listed in PREMIUM_FEATURES; no UI yet',
+    notes: 'v1 uses Food Scan photo heuristics; barcode deferred post-launch',
   },
   {
     id: 'meal-planning',
@@ -146,8 +146,16 @@ export const PARITY_BACKLOG: ParityItem[] = [
     title: 'Production Firebase configuration',
     nativeRef: 'Firebase',
     priority: 'high',
-    status: 'planned',
-    notes: 'isFirebaseConfigured: false in appConfig; demo mode active',
+    status: 'done',
+    notes: 'Firebase configured; App Check on; connection + entitlement callables; demo mode off',
+  },
+  {
+    id: 'launch-hardening',
+    title: 'Launch hardening (privacy, entitlements, email)',
+    nativeRef: 'Cloud Functions',
+    priority: 'high',
+    status: 'done',
+    notes: 'See docs/LAUNCH_TO_9.md',
   },
 ];
 

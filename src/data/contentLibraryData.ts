@@ -24,6 +24,9 @@ export type ContentLibraryItem = {
 const LEARNING_ROUTES: Record<string, { screen: string; params?: Record<string, unknown> }> = {
   vitamins: { screen: Screen.vitaminsLearning },
   'nutrition-basics': { screen: Screen.nutritionBasics },
+  'lung-health': { screen: Screen.lungHealth },
+  'targeted-treatment': { screen: Screen.targetedTreatment },
+  'multiple-myeloma': { screen: Screen.multipleMyeloma },
 };
 
 function learningNavigate(guideId: string) {

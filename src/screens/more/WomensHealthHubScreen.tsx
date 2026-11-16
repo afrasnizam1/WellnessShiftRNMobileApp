@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { Text, StyleSheet, ScrollView } from 'react-native';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { format } from 'date-fns';
-import { Colors, Typography, Spacing } from '../../theme';
+import { Colors, Typography, Spacing, tabBarScrollPadding } from '../../theme';
 import { AppCard, ScreenHeader, ListRow } from '../../components/ui';
 import AppScreen from '../../components/common/AppScreen';
 import { Screen } from '../../navigation/screenNames';
@@ -98,7 +98,7 @@ export default function WomensHealthHubScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: 40 },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding},
   lead: {
     fontSize: Typography.size.sm,
     color: Colors.textSecondary,

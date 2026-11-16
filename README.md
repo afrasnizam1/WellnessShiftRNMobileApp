@@ -2,11 +2,11 @@
 
 Patient wellness app and clinician portal, built in React Native for **iOS** and **Android**.
 
-People get a daily plan, fitness and anatomy learning, AI insights, and (when linked) a clinician care plan. Clinicians manage patients, send modules, and follow progress in the same Firebase project.
+People get a daily plan, fitness and anatomy learning, Wellness Coach guidance, and (when linked) a clinician care plan. Clinicians manage patients, send modules, and follow progress in the same Firebase project.
 
 | | |
 |---|---|
-| Website | [wellnessshift.co.uk](https://wellnessshift.co.uk) |
+| Website | [wellnesshift.co.uk](https://wellnesshift.co.uk) |
 | Firebase | `wellnessshift-rn-ios` |
 | iOS bundle | `afras.wellnessshiftrn.ios` |
 | Android id | `afras.wellnessshiftrn.android` |
@@ -32,7 +32,7 @@ People get a daily plan, fitness and anatomy learning, AI insights, and (when li
 
 ## Who it’s for
 
-**Patients** sign up (or sign in), complete onboarding and a wellness quiz, then land in a tabbed app: Home, Fitness, AI Insights, Analytics, More. If a clinician is connected, a **My Care** tab appears with assigned tasks.
+**Patients** sign up (or sign in), complete onboarding and a wellness quiz, then land in a tabbed app: Home, Fitness, Coach, Analytics, More. If a clinician is connected, a **My Care** tab appears with assigned tasks.
 
 **Clinicians** use a separate portal: dashboard, patient list, care-plan templates, Fitness Hub recommendations, messaging, and practice settings.
 
@@ -49,7 +49,7 @@ Roles are stored in Firebase (`registeredUsers` / `patients` / `clinicians`). Ro
 | **Auth & onboarding** | Email, Sign in with Apple, optional Google. Purpose / role, quiz, results, habits, HealthKit or Health Connect permission, notifications, paywall |
 | **Home** | Wellness score, daily plan, check-ins, steps / activity, body metrics, food scan, health records, care-plan banner |
 | **Fitness** | Module library, workouts, nutrition, meditation, breathing, calculators, anatomy holograms, guided programs |
-| **AI Insights** | Feed of insights plus health-coach chat (OpenAI via Cloud Functions) |
+| **Coach** | Wellness Coach chat and rule-based lifestyle guidance |
 | **Analytics** | Score history, category detail, progress, PDF / export |
 | **More** | Profile, subscription, connect clinician, habits, social, messages, privacy, help |
 | **My Care** | Clinician care-plan tasks — open a linked Fitness module, mark done, return to the plan |
@@ -77,7 +77,7 @@ flowchart TB
   Root --> Clinician[Clinician tabs]
   Patient --> Home[Home]
   Patient --> Fitness[Fitness]
-  Patient --> AI[AI Insights]
+  Patient --> AI[Coach]
   Patient --> Analytics[Analytics]
   Patient --> More[More]
   Patient --> Care[My Care — if linked]

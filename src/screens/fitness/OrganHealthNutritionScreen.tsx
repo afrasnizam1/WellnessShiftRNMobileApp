@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../../navigation/screenNames';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { AppCard, ScreenHeader, IconBadge } from '../../components/ui';
 import { ORGAN_SECTIONS } from '../../data/organHealthNutrition';
 import type { IoniconName } from '../../theme/icons';
@@ -57,7 +57,7 @@ export default function OrganHealthNutritionScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   header: { paddingHorizontal: Spacing.base, paddingTop: Spacing.sm },
-  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: Spacing['3xl'] },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   intro: { fontSize: Typography.size.sm, color: Colors.textSecondary, lineHeight: 20 },
   organCard: { gap: Spacing.sm },
   organHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },

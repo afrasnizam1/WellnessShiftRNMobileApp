@@ -40,6 +40,7 @@ export async function applyPendingOnboardingToAccount(uid: string): Promise<bool
         }
       : {}),
     ...(hasQuiz ? { quizComplete: true } : {}),
+    ...(hasQuiz && pending.quizAnswers ? { quizAnswers: pending.quizAnswers } : {}),
     // Guest who already saw Results → enter the app after signup.
     onboardingComplete: guestFinishedResults,
     appPurpose: pending.appPurpose ?? pending.appPurposes?.[0] ?? undefined,
@@ -60,6 +61,9 @@ export async function applyPendingOnboardingToAccount(uid: string): Promise<bool
   if (hasQuiz && pending.wellnessScore) {
     await wellnessService.saveScore(uid, pending.wellnessScore);
     await onboardingStorage.markQuizComplete(uid);
+    if (pending.quizAnswers) {
+      await onboardingStorage.saveQuizAnswers(uid, pending.quizAnswers);
+    }
   }
 
   if (hasGoals || hasQuiz) {

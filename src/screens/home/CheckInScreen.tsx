@@ -4,7 +4,7 @@ import {
   ScrollView, TextInput, ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
+import { Colors, Typography, Spacing, Radius, Shadow, tabBarScrollPadding } from '../../theme';
 import { useAppStore } from '../../store';
 import { checkInService } from '../../services/checkInService';
 import { gamificationService } from '../../services/gamificationService';
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   backBtn: { width: 40 },
   backText: { fontSize: 32, color: Colors.primary, lineHeight: 38 },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: Typography.size.base, fontWeight: '700', color: Colors.text },
-  content: { padding: Spacing.base, gap: Spacing.lg, paddingBottom: Spacing.xl },
+  content: { padding: Spacing.base, gap: Spacing.lg, paddingBottom: tabBarScrollPadding },
   intro: { fontSize: Typography.size.xl, fontWeight: '700', color: Colors.text, textAlign: 'center' },
   introSub: { fontSize: Typography.size.sm, color: Colors.textSecondary, textAlign: 'center', marginTop: -Spacing.sm },
   sectionLabel: { fontSize: Typography.size.sm, fontWeight: '700', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.8 },

@@ -133,8 +133,39 @@ function androidOffersForSku(productId: string): { sku: string; offerToken: stri
 let storeProducts: ProductSubscription[] = [];
 
 export const iapService = {
-  init: async () => {
-    await initConnection();
+  /**
+   * Connect to the store. Returns false when billing is unavailable
+   * (Android emulator, or Play Billing not set up). That case is expected
+   * and must not raise a LogBox error.
+   */
+  init: async (): Promise<boolean> => {
+    const originalError = console.error;
+    console.error = (...args: unknown[]) => {
+      const text = args
+        .map((arg) => {
+          if (arg instanceof Error) return arg.message;
+          if (typeof arg === 'string') return arg;
+          try {
+            return JSON.stringify(arg);
+          } catch {
+            return String(arg);
+          }
+        })
+        .join(' ');
+      if (text.includes('Failed to initialize IAP connection')) return;
+      originalError(...args);
+    };
+    try {
+      await initConnection();
+      return true;
+    } catch {
+      logger.log(
+        '[IAP] Billing is not available in this build. Subscription screens keep the fallback prices.',
+      );
+      return false;
+    } finally {
+      console.error = originalError;
+    }
   },
 
   end: async () => {
@@ -151,9 +182,9 @@ export const iapService = {
         const found = new Set(storeProducts.map(productSku));
         const missing = ALL_PRODUCT_IDS.filter((id) => !found.has(id));
         if (missing.length > 0) {
-          console.warn(
-            '[IAP] ASC / Play products not returned by the store (create & attach to app):',
-            missing.join(', ')
+          logger.log(
+            '[IAP] Store did not return these product IDs yet:',
+            missing.join(', '),
           );
         } else {
           logger.log('[IAP] All subscription product IDs resolved from the store.');
@@ -163,7 +194,7 @@ export const iapService = {
     } catch (e) {
       storeProducts = [];
       if (__DEV__) {
-        console.warn('[IAP] loadStoreProducts failed — verify products in App Store Connect / Play Console:', e);
+        logger.log('[IAP] Could not load store products. Using fallback prices.', e);
       }
       return [];
     }

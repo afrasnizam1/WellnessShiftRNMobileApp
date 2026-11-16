@@ -6,8 +6,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AppScreen from '../../components/common/AppScreen';
-import { AppCard } from '../../components/ui';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { AppCard, ScreenHeader } from '../../components/ui';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { useAppStore } from '../../store';
 import { Screen } from '../../navigation/screenNames';
 import { socialService, type Friend, type AccountabilityBoardEntry, type SocialChallenge } from '../../services/socialService';
@@ -66,8 +66,11 @@ export default function SocialHubScreen() {
   return (
     <AppScreen style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Social Accountability</Text>
-        <Text style={styles.subtitle}>Stay connected and motivated without the pressure of rankings.</Text>
+        <ScreenHeader
+          title="Social Accountability"
+          subtitle="Stay connected and motivated without the pressure of rankings."
+          onBack={() => navigation.goBack()}
+        />
 
         <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate(Screen.addFriend)}>
           <Ionicons name="person-add-outline" size={20} color={Colors.white} />
@@ -173,7 +176,7 @@ export default function SocialHubScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.base, paddingTop: Spacing.xl, gap: Spacing.md, paddingBottom: Spacing['2xl'] },
+  content: { padding: Spacing.base, paddingTop: Spacing.xl, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   title: { fontSize: Typography.size['2xl'], fontWeight: '800', color: Colors.text, textAlign: 'center' },
   subtitle: { fontSize: Typography.size.base, color: Colors.textSecondary, textAlign: 'center', marginTop: Spacing.xs },
   fab: {

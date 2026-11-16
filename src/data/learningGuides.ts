@@ -17,6 +17,30 @@ export type LearningGuide = {
 /** 10 learning guides — ported from iOS FitnessHubView.learningDestinations */
 export const LEARNING_GUIDES: LearningGuide[] = [
   {
+    id: 'lung-health',
+    title: 'Lung cancer & prevention',
+    subtitle: 'Tap the airway diagram, then see risks and how to lower them',
+    icon: 'fitness-outline',
+    image: require('../assets/anatomy/bronchial-alveoli-hd.png'),
+    fallbackColors: ['#7EC8C3', '#C4B6E8'],
+  },
+  {
+    id: 'targeted-treatment',
+    title: 'Targeted cancer treatment',
+    subtitle: 'How antibody-drug conjugates carry a drug to cancer cells',
+    icon: 'flask-outline',
+    image: require('../assets/anatomy/antibody-drug-conjugate.jpg'),
+    fallbackColors: ['#8E7CC3', '#7EB6E0'],
+  },
+  {
+    id: 'multiple-myeloma',
+    title: 'Multiple myeloma',
+    subtitle: 'A short knowledge check on plasma cells and bone marrow',
+    icon: 'pulse-outline',
+    image: require('../assets/anatomy/multiple-myeloma.png'),
+    fallbackColors: ['#F4A24A', '#E85A4F'],
+  },
+  {
     id: 'vitamins',
     title: 'Vitamins & Supplements',
     subtitle: 'Benefits, best time to take, and what to choose when you feel low',
@@ -100,4 +124,12 @@ export const LEARNING_GUIDES: LearningGuide[] = [
 
 export function getLearningGuide(id: string): LearningGuide | undefined {
   return LEARNING_GUIDES.find((g) => g.id === id);
+}
+
+export function filterLearningGuides(query: string): LearningGuide[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return LEARNING_GUIDES;
+  return LEARNING_GUIDES.filter(
+    (g) => g.title.toLowerCase().includes(q) || g.subtitle.toLowerCase().includes(q),
+  );
 }

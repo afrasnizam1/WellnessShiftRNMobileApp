@@ -12,6 +12,7 @@ import { setupGoogleSignIn } from './src/services/socialAuth';
 import { crashlyticsService, installGlobalErrorHandler } from './src/services/crashlyticsService';
 import { appCheckService } from './src/services/appCheckService';
 import { contentsquareService } from './src/services/contentsquareService';
+import { firebaseAnalytics } from './src/services/firebaseAnalytics';
 import { ensureFirestoreSettings } from './src/services/firestoreHelpers';
 import { useAppStore } from './src/store';
 import { appConfig, isGoogleSignInConfigured } from './src/config/appConfig';
@@ -24,6 +25,7 @@ if (__DEV__) {
   LogBox.ignoreLogs([
     'HeapReactNativeBridgeModule requires main queue setup',
     'Heap start did not become ready before timeout',
+    'InteractionManager has been deprecated',
   ]);
 }
 
@@ -51,6 +53,7 @@ export default function App() {
         await crashlyticsService.init();
         installGlobalErrorHandler();
         await appCheckService.init();
+        await firebaseAnalytics.init();
       }
 
       try {

@@ -131,8 +131,12 @@ export const Spacing = {
 export const TabBarMetrics = {
   bottom: Platform.OS === 'ios' ? 24 : 12,
   height: Platform.OS === 'ios' ? 72 : 64,
-  contentInset: Platform.OS === 'ios' ? 120 : 100,
+  /** Extra scroll padding so last content clears the floating tab (iOS + Android). */
+  contentInset: Platform.OS === 'ios' ? 128 : 112,
 };
+
+/** ScrollView contentContainerStyle.paddingBottom when the floating tab bar is visible. */
+export const tabBarScrollPadding = TabBarMetrics.contentInset + Spacing.lg;
 
 export const Radius = {
   sm: 8,

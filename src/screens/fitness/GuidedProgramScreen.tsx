@@ -1,16 +1,18 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
+import { Colors, Typography, Spacing, Radius, Shadow, tabBarScrollPadding } from '../../theme';
 import type { FitnessModule } from '../../types';
 import { getGuidedProgram } from '../../data/guidedProgramContent';
 import AppScreen from '../../components/common/AppScreen';
+import MindfulnessToolkit from '../../components/fitness/MindfulnessToolkit';
 
 export default function GuidedProgramScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const module: FitnessModule | undefined = route.params?.module;
   if (!module) return null;
+  if (module.id === 'mindfulness-toolkit') return <MindfulnessToolkit />;
 
   const program = getGuidedProgram(module);
 
@@ -88,7 +90,7 @@ const styles = StyleSheet.create({
   backBtn: { width: 40 },
   backText: { fontSize: 32, color: Colors.primary, lineHeight: 38 },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: Typography.size.base, fontWeight: '700', color: Colors.text },
-  content: { padding: Spacing.base, gap: Spacing.md },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   hero: { borderRadius: Radius.xl, padding: Spacing.xl, alignItems: 'center', gap: Spacing.sm },
   heroIcon: { fontSize: 56 },
   heroTitle: { fontSize: Typography.size.xl, fontWeight: '700', textAlign: 'center' },

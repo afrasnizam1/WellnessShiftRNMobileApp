@@ -6,11 +6,11 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { CommonActions, useNavigation, useRoute } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import type { IoniconName } from '../../theme/icons';
 import { useAppStore } from '../../store';
 import { subscriptionService } from '../../services/subscriptionService';
-import { getEffectiveTier } from '../../services/iap';
+import { canAccessFeature, getEffectiveTier, PREMIUM_FEATURES } from '../../services/iap';
 import { onboardingStorage } from '../../services/onboardingStorage';
 import { pendingOnboardingStorage } from '../../services/pendingOnboardingStorage';
 import { userService } from '../../services/firebase';
@@ -61,7 +61,7 @@ const FEATURE_CONTEXT: Record<string, { icon: IoniconName; title: string; desc: 
 };
 
 const PLAN_FEATURES: FeatureHighlight[] = [
-  { icon: 'sparkles-outline', color: Colors.brand, title: 'Higher AI coach message allowance' },
+  { icon: 'sparkles-outline', color: Colors.brand, title: 'Higher Wellness Coach message allowance' },
   { icon: 'stats-chart-outline', color: Colors.physical, title: 'Advanced analytics & trends' },
   { icon: 'clipboard-outline', color: Colors.nutrition, title: 'Wellness year PDF export' },
   { icon: 'game-controller-outline', color: Colors.mental, title: 'Unlimited brain training' },
@@ -74,16 +74,19 @@ export default function PaywallScreen() {
   const feature = route.params?.feature ?? 'default';
   const fromOnboarding = route.params?.fromOnboarding === true;
   const context = FEATURE_CONTEXT[feature] ?? FEATURE_CONTEXT.default;
+  const requiresPro = PREMIUM_FEATURES[feature]?.includes('pro') === true
+    && PREMIUM_FEATURES[feature]?.includes('growth') !== true;
 
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('yearly');
-  const [selectedTier, setSelectedTier] = useState<'growth' | 'pro'>('growth');
+  const [selectedTier, setSelectedTier] = useState<'growth' | 'pro'>(requiresPro ? 'pro' : 'growth');
   const [loading, setLoading] = useState(false);
   const [pricesLoaded, setPricesLoaded] = useState(false);
   const previousTier = useRef(subscriptionTier);
 
   const effectiveTier = getEffectiveTier(subscriptionTier);
-  const alreadyUnlocked =
-    effectiveTier === 'pro' || (effectiveTier === 'growth' && selectedTier === 'growth');
+  const alreadyUnlocked = PREMIUM_FEATURES[feature]
+    ? canAccessFeature(feature, subscriptionTier)
+    : effectiveTier === 'pro' || (effectiveTier === 'growth' && selectedTier === 'growth' && !requiresPro);
 
   useEffect(() => {
     subscriptionService.loadStoreProducts().finally(() => setPricesLoaded(true));
@@ -262,7 +265,7 @@ export default function PaywallScreen() {
 
         <View style={styles.plans}>
           {([
-            { id: 'growth' as const, name: 'Growth', desc: 'AI coach, analytics & export', price: growthPrice },
+            { id: 'growth' as const, name: 'Growth', desc: 'Wellness Coach, analytics & export', price: growthPrice },
             { id: 'pro' as const, name: 'Pro', desc: 'Growth + clinician tools', price: proPrice },
           ]).map((plan) => {
             const selected = selectedTier === plan.id;
@@ -392,7 +395,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: Spacing.base,
-    paddingBottom: Spacing.md,
+    paddingBottom: tabBarScrollPadding,
     gap: Spacing.lg,
   },
   hero: {

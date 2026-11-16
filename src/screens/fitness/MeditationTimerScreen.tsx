@@ -4,7 +4,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import AppScreen from '../../components/common/AppScreen';
 import { IconBadge } from '../../components/ui';
 import { getMeditationCue, MEDITATION_TECHNIQUES } from '../../data/guidedSessionContent';
@@ -61,9 +61,9 @@ export default function MeditationTimerScreen() {
   };
 
   return (
-    <AppScreen style={styles.safe}>
+    <AppScreen>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => { reset(); navigation.goBack(); }} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => { reset(); navigation.goBack(); }} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Back">
           <Text style={styles.backText}>‹</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Meditation</Text>
@@ -163,58 +163,99 @@ export default function MeditationTimerScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#0A0A1A' },
   header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: Spacing.base, paddingVertical: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.md,
   },
   backBtn: { width: 40 },
-  backText: { fontSize: 32, color: Colors.white, lineHeight: 38 },
-  headerTitle: { flex: 1, textAlign: 'center', fontSize: Typography.size.base, fontWeight: '700', color: Colors.white },
-  content: { padding: Spacing.base, gap: Spacing.lg },
-  sectionLabel: { fontSize: Typography.size.sm, fontWeight: '700', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: 0.8 },
+  backText: { fontSize: 32, color: Colors.text, lineHeight: 38 },
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: Typography.size.base,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  content: { padding: Spacing.base, gap: Spacing.lg, paddingBottom: tabBarScrollPadding },
+  sectionLabel: {
+    fontSize: Typography.size.xs,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
   durationRow: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' },
   durationChip: {
-    width: 52, height: 52, borderRadius: 26, borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   durationChipActive: { backgroundColor: Colors.mindfulness, borderColor: Colors.mindfulness },
-  durationText: { fontSize: Typography.size.base, color: 'rgba(255,255,255,0.6)', fontWeight: '600' },
+  durationText: { fontSize: Typography.size.base, color: Colors.text, fontWeight: '700' },
   durationTextActive: { color: Colors.white },
   techGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
   techCard: {
-    width: '48%', padding: Spacing.md, borderRadius: Radius.lg,
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)', gap: 4,
+    width: '48%',
+    padding: Spacing.md,
+    borderRadius: Radius.lg,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+    gap: 4,
   },
-  techCardActive: { borderColor: Colors.mindfulness, backgroundColor: Colors.mindfulness + '22' },
-  techName: { fontSize: Typography.size.sm, fontWeight: '700', color: 'rgba(255,255,255,0.8)' },
-  techNameActive: { color: Colors.white },
-  techDesc: { fontSize: Typography.size.xs, color: 'rgba(255,255,255,0.4)' },
+  techCardActive: { borderColor: Colors.mindfulness, backgroundColor: '#E7FBF6' },
+  techName: { fontSize: Typography.size.sm, fontWeight: '700', color: Colors.text },
+  techNameActive: { color: Colors.text },
+  techDesc: { fontSize: Typography.size.xs, color: Colors.textSecondary, lineHeight: 16 },
   timerWrap: { alignItems: 'center', gap: Spacing.md },
   timerCircle: {
-    width: 200, height: 200, borderRadius: 100,
-    borderWidth: 3, borderColor: Colors.mindfulness + '66',
-    backgroundColor: Colors.mindfulness + '11',
-    alignItems: 'center', justifyContent: 'center', gap: 4,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    borderWidth: 3,
+    borderColor: Colors.mindfulness,
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
   },
-  timerTime: { fontSize: Typography.size['3xl'], fontWeight: '700', color: Colors.white },
-  timerLabel: { fontSize: Typography.size.xs, color: 'rgba(255,255,255,0.5)', textAlign: 'center' },
-  progressTrack: { width: '100%', height: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: Colors.mindfulness, borderRadius: 2 },
+  timerTime: { fontSize: Typography.size['3xl'], fontWeight: '800', color: Colors.text, letterSpacing: -1 },
+  timerLabel: { fontSize: Typography.size.sm, color: Colors.textSecondary, textAlign: 'center', fontWeight: '600' },
+  progressTrack: {
+    width: '100%',
+    height: 6,
+    backgroundColor: Colors.border,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressFill: { height: '100%', backgroundColor: Colors.mindfulness, borderRadius: 3 },
   guidanceCard: {
-    backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: Radius.lg,
-    padding: Spacing.base, borderLeftWidth: 3, borderLeftColor: Colors.mindfulness,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.base,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.mindfulness,
   },
-  guidanceText: { fontSize: Typography.size.sm, color: 'rgba(255,255,255,0.85)', lineHeight: 22 },
+  guidanceText: { fontSize: Typography.size.sm, color: Colors.text, lineHeight: 22 },
   completeCard: {
-    backgroundColor: Colors.success + '22', borderRadius: Radius.lg,
-    padding: Spacing.base, alignItems: 'center', gap: Spacing.sm,
+    backgroundColor: Colors.successLight,
+    borderRadius: Radius.lg,
+    padding: Spacing.base,
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
-  completeTitle: { fontSize: Typography.size.lg, fontWeight: '700', color: Colors.white },
-  completeSub: { fontSize: Typography.size.sm, color: 'rgba(255,255,255,0.7)', textAlign: 'center', lineHeight: 20 },
+  completeTitle: { fontSize: Typography.size.lg, fontWeight: '700', color: Colors.text },
+  completeSub: { fontSize: Typography.size.sm, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
   controls: { gap: Spacing.sm },
   primaryBtn: { borderRadius: Radius.xl, paddingVertical: Spacing.base, alignItems: 'center' },
   primaryBtnText: { color: Colors.white, fontSize: Typography.size.lg, fontWeight: '700' },
   secondaryBtn: { alignItems: 'center', paddingVertical: Spacing.sm },
-  secondaryBtnText: { color: 'rgba(255,255,255,0.4)', fontSize: Typography.size.sm },
+  secondaryBtnText: { color: Colors.textSecondary, fontSize: Typography.size.sm, fontWeight: '700' },
 });

@@ -6,7 +6,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { LineChart } from 'react-native-gifted-charts';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Colors, Typography, Spacing, Radius, WELLNESS_CATEGORIES } from '../../theme';
+import { Colors, Typography, Spacing, Radius, WELLNESS_CATEGORIES, tabBarScrollPadding } from '../../theme';
 import { ScreenHeader, AppCard, AnimatedPressable } from '../../components/ui';
 import {
   buildCategoryHistorySeries,
@@ -158,7 +158,7 @@ export default function CategoryDetailScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.base, gap: Spacing.md },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   error: { textAlign: 'center', marginTop: Spacing.xl, color: Colors.textSecondary },
   hero: { alignItems: 'center', paddingVertical: Spacing.xl, gap: Spacing.xs },
   heroIcon: { fontSize: 40 },

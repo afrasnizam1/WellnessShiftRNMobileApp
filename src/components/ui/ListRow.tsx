@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { Colors, Typography, Spacing } from '../../theme';
@@ -20,6 +20,8 @@ type Props = {
   badgeColor?: string;
   /** Small red notification dot (e.g. unseen care plan). */
   showDot?: boolean;
+  /** Destructive action styling (red title, no chevron). */
+  destructive?: boolean;
   onPress?: () => void;
   showDivider?: boolean;
   trailing?: React.ReactNode;
@@ -38,19 +40,22 @@ function ListRow({
   badge,
   badgeColor = Colors.brand,
   showDot = false,
+  destructive = false,
   onPress,
   showDivider = true,
   trailing,
   animated = true,
 }: Props) {
   const tint = iconBg ?? iconTintBg(iconColor);
+  // Reanimated pressables can swallow taps on Android; use plain Pressable there.
+  const useAnimated = animated && Platform.OS === 'ios';
 
   const iconTile = iconName ? (
     <View style={[styles.iconTile, { backgroundColor: tint }]}>
       <Ionicons
         name={iconName as keyof typeof Ionicons.glyphMap}
         size={19}
-        color={iconColor}
+        color={destructive ? Colors.error : iconColor}
       />
     </View>
   ) : icon ? (
@@ -70,7 +75,12 @@ function ListRow({
       {iconTile}
       <View style={styles.info}>
         <View style={styles.titleRow}>
-          <Text style={styles.title} numberOfLines={1}>{title}</Text>
+          <Text
+            style={[styles.title, destructive && styles.titleDestructive]}
+            numberOfLines={1}
+          >
+            {title}
+          </Text>
           {showDot ? <View style={styles.dot} accessibilityLabel="New" /> : null}
           {badge ? (
             <View style={[styles.badge, { backgroundColor: badgeColor + '20' }]}>
@@ -82,23 +92,32 @@ function ListRow({
           <Text style={styles.subtitle} numberOfLines={2}>{subtitle}</Text>
         ) : null}
       </View>
-      {trailing ?? (onPress ? (
+      {trailing ?? (onPress && !destructive ? (
         <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} style={styles.chevron} />
       ) : null)}
     </>
   );
 
   if (onPress) {
-    const rowStyle = [styles.row, showDivider && styles.rowDivider];
-    if (!animated) {
+    const rowStyle = ({ pressed }: { pressed: boolean }) => [
+      styles.row,
+      showDivider && styles.rowDivider,
+      pressed && styles.rowPressed,
+    ];
+    if (!useAnimated) {
       return (
-        <Pressable style={rowStyle} onPress={onPress}>
+        <Pressable
+          style={rowStyle}
+          onPress={onPress}
+          accessibilityRole="button"
+          android_ripple={{ color: 'rgba(0,0,0,0.06)' }}
+        >
           {content}
         </Pressable>
       );
     }
     return (
-      <AnimatedPressable style={rowStyle} onPress={onPress}>
+      <AnimatedPressable style={[styles.row, showDivider && styles.rowDivider]} onPress={onPress}>
         {content}
       </AnimatedPressable>
     );
@@ -142,6 +161,10 @@ const styles = StyleSheet.create({
     color: Colors.text,
     letterSpacing: -0.2,
   },
+  titleDestructive: {
+    color: Colors.error,
+    fontWeight: '700',
+  },
   subtitle: {
     fontSize: Typography.size.sm,
     color: Colors.textSecondary,
@@ -167,5 +190,8 @@ const styles = StyleSheet.create({
   chevron: {
     opacity: 0.55,
     marginRight: 2,
+  },
+  rowPressed: {
+    backgroundColor: 'rgba(60, 60, 67, 0.06)',
   },
 });

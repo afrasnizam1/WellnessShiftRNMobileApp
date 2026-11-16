@@ -10,6 +10,7 @@ import { userService } from './firebase';
 import { isFirebaseReady } from './firebaseReady';
 import { contentsquareService } from './contentsquareService';
 import type { SubscriptionTier } from '../types';
+import { logger } from '../utils/logger';
 
 type TierListener = (tier: SubscriptionTier) => void;
 
@@ -19,7 +20,8 @@ let currentUid: string | null = null;
 async function persistTier(
   tier: SubscriptionTier,
   productId?: string,
-  uid?: string | null
+  uid?: string | null,
+  transactionId?: string,
 ) {
   await subscriptionStorage.save(tier, productId);
   const resolvedUid = uid ?? currentUid;
@@ -27,6 +29,20 @@ async function persistTier(
     await userService.updateProfile(resolvedUid, {
       subscriptionTier: tier,
     }).catch(() => {});
+
+    try {
+      const { cloudFunctions } = await import('./cloudFunctions');
+      if (tier === 'free') {
+        await cloudFunctions.syncSubscriptionEntitlement({ clear: true });
+      } else if (productId) {
+        await cloudFunctions.syncSubscriptionEntitlement({
+          productId,
+          transactionId,
+        });
+      }
+    } catch (error) {
+      console.warn('[subscriptionService] entitlement sync failed:', error);
+    }
   }
 }
 
@@ -38,7 +54,10 @@ export const subscriptionService = {
     }
 
     try {
-      await iapService.init();
+      const connected = await iapService.init();
+      if (!connected) {
+        return () => {};
+      }
       await iapService.loadStoreProducts();
 
       const storedTier = await subscriptionStorage.getTier();
@@ -55,7 +74,7 @@ export const subscriptionService = {
       cleanupListeners?.();
       cleanupListeners = iapService.setupListeners(
         async (purchase, tier) => {
-          await persistTier(tier, purchase.productId);
+          await persistTier(tier, purchase.productId, undefined, purchase.id);
           onTierChange(tier);
 
           const product = iapService.getCachedStoreProducts().find(
@@ -82,7 +101,7 @@ export const subscriptionService = {
         cleanupListeners = null;
       };
     } catch (e) {
-      console.warn('Subscription init failed:', e);
+      logger.log('[subscriptionService] Billing init skipped:', e);
       return () => {};
     }
   },

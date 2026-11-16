@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, StatusBar } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, StatusBar, Keyboard, Platform } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,6 +25,19 @@ export default function AuthFormHeader({
   children,
   gradient = AUTH_GRADIENT,
 }: Props) {
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const show = Keyboard.addListener(showEvent, () => setKeyboardOpen(true));
+    const hide = Keyboard.addListener(hideEvent, () => setKeyboardOpen(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
   return (
     <View style={[styles.root, { backgroundColor: gradient[0] }]}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
@@ -40,20 +53,27 @@ export default function AuthFormHeader({
       <View style={[styles.orb, styles.orb3]} />
 
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <AnimatedPressable
-          onPress={onBack}
-          style={styles.backBtn}
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-        >
-          <Ionicons name="chevron-back" size={22} color="#fff" />
-        </AnimatedPressable>
-
-        <View style={styles.heroContent}>
-          <WellnessShiftLogoBadge diameter={72} />
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.subtitle}>{subtitle}</Text>
+        <View style={styles.topBar}>
+          <AnimatedPressable
+            onPress={onBack}
+            style={styles.backBtn}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <Ionicons name="chevron-back" size={22} color="#fff" />
+          </AnimatedPressable>
         </View>
+
+        {keyboardOpen ? (
+          <Text style={styles.compactTitle} numberOfLines={1}>{title}</Text>
+        ) : (
+          <View style={styles.heroContent}>
+            <WellnessShiftLogoBadge diameter={72} />
+            <Text style={styles.title}>{title}</Text>
+            <Text style={styles.subtitle}>{subtitle}</Text>
+          </View>
+        )}
 
         <View style={styles.glassSheet}>{children}</View>
       </SafeAreaView>
@@ -78,11 +98,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(242, 77, 128, 0.18)',
   },
   safe: { flex: 1 },
-  backBtn: {
-    position: 'absolute',
-    top: Spacing.sm,
-    left: Spacing.xl,
+  topBar: {
     zIndex: 10,
+    paddingTop: Spacing.xs,
+    paddingHorizontal: Spacing.xl,
+    alignItems: 'flex-start',
+  },
+  backBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -95,7 +117,7 @@ const styles = StyleSheet.create({
   heroContent: {
     alignItems: 'center',
     gap: Spacing.sm,
-    paddingTop: Spacing['2xl'],
+    paddingTop: Spacing.sm,
     paddingBottom: Spacing.lg,
     paddingHorizontal: Spacing.xl,
   },
@@ -113,6 +135,13 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     maxWidth: 280,
     lineHeight: 18,
+  },
+  compactTitle: {
+    fontSize: Typography.size.lg,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    paddingBottom: Spacing.sm,
   },
   glassSheet: {
     flex: 1,

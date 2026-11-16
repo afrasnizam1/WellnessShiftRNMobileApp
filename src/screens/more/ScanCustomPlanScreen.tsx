@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { AppCard, ScreenHeader } from '../../components/ui';
 import { clinicianService } from '../../services/clinicianService';
 import { useAppStore } from '../../store';
@@ -75,7 +75,7 @@ export default function ScanCustomPlanScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   header: { paddingHorizontal: Spacing.base, paddingTop: Spacing.sm },
-  content: { padding: Spacing.base, gap: Spacing.md },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   card: { gap: Spacing.md },
   help: { fontSize: Typography.size.sm, color: Colors.textSecondary, lineHeight: 20 },
   input: {

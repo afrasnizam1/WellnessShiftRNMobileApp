@@ -6,8 +6,8 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AppScreen from '../../components/common/AppScreen';
-import { AppCard } from '../../components/ui';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { AppCard, ScreenHeader } from '../../components/ui';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { useAppStore } from '../../store';
 import { Screen } from '../../navigation/screenNames';
 import { socialService, type SocialChallenge } from '../../services/socialService';
@@ -217,15 +217,11 @@ export default function SocialChallengesScreen() {
   return (
     <AppScreen style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Challenges</Text>
-          <TouchableOpacity 
-            style={styles.createButton}
-            onPress={() => navigation.navigate(Screen.createChallenge)}
-          >
-            <Ionicons name="add-circle-outline" size={24} color={Colors.primary} />
-          </TouchableOpacity>
-        </View>
+        <ScreenHeader
+          title="Challenges"
+          onBack={() => navigation.goBack()}
+          actions={[{ icon: 'add-circle-outline', onPress: () => navigation.navigate(Screen.createChallenge) }]}
+        />
 
         <View style={styles.tabs}>
           {(['active', 'joined', 'created'] as const).map((tab) => (
@@ -328,7 +324,7 @@ const styles = StyleSheet.create({
     padding: Spacing.base, 
     paddingTop: Spacing.xl, 
     gap: Spacing.md, 
-    paddingBottom: Spacing['2xl'] 
+    paddingBottom: tabBarScrollPadding 
   },
   header: {
     flexDirection: 'row',

@@ -6,8 +6,8 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AppScreen from '../../components/common/AppScreen';
-import { AppCard } from '../../components/ui';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { AppCard, ScreenHeader } from '../../components/ui';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { Screen } from '../../navigation/screenNames';
 
 interface LearningModule {
@@ -209,10 +209,11 @@ export default function AnatomyLearningScreen() {
   return (
     <AppScreen style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Anatomy Learning</Text>
-          <Text style={styles.subtitle}>Master human anatomy with interactive 3D lessons</Text>
-        </View>
+        <ScreenHeader
+          title="Anatomy Learning"
+          subtitle="Master human anatomy with interactive 3D lessons"
+          onBack={() => navigation.goBack()}
+        />
 
         <View style={styles.searchSection}>
           <View style={styles.searchBar}>
@@ -302,7 +303,7 @@ const styles = StyleSheet.create({
     padding: Spacing.base, 
     paddingTop: Spacing.xl, 
     gap: Spacing.md, 
-    paddingBottom: Spacing['2xl'] 
+    paddingBottom: tabBarScrollPadding 
   },
   header: {
     alignItems: 'center',

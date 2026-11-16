@@ -6,8 +6,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AppScreen from '../../components/common/AppScreen';
-import { AppCard } from '../../components/ui';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { AppCard, ScreenHeader } from '../../components/ui';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { Screen } from '../../navigation/screenNames';
 import { WORKOUTS, WORKOUT_PROGRAMS, WORKOUT_CATEGORIES, type Workout, type WorkoutProgram } from '../../data/workouts';
 
@@ -148,10 +148,11 @@ export default function WorkoutHubScreen() {
   return (
     <AppScreen style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Workouts</Text>
-          <Text style={styles.subtitle}>Personalized exercise programs for your fitness goals</Text>
-        </View>
+        <ScreenHeader
+          title="Workouts"
+          subtitle="Personalized exercise programs for your fitness goals"
+          onBack={() => navigation.goBack()}
+        />
 
         <View style={styles.tabsContainer}>
           <TouchableOpacity
@@ -267,7 +268,7 @@ const styles = StyleSheet.create({
     padding: Spacing.base, 
     paddingTop: Spacing.xl, 
     gap: Spacing.md, 
-    paddingBottom: Spacing['2xl'] 
+    paddingBottom: tabBarScrollPadding 
   },
   header: {
     alignItems: 'center',

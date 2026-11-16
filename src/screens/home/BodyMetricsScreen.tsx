@@ -6,7 +6,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AppScreen from '../../components/common/AppScreen';
 import { AppCard, BrandButton, ScreenHeader } from '../../components/ui';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { useAppStore } from '../../store';
 import { healthKitService } from '../../services/healthkit';
 import {
@@ -123,7 +123,7 @@ export default function BodyMetricsScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   header: { paddingHorizontal: Spacing.base, paddingTop: Spacing.sm },
-  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: Spacing['2xl'] },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   hero: { gap: Spacing.md },
   scoreGrid: { flexDirection: 'row', gap: Spacing.sm },
   scoreCell: {

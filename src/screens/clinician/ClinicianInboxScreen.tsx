@@ -9,7 +9,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
 import { useAppStore } from '../../store';
 import { clinicianService } from '../../services/clinicianService';
-import { messageService } from '../../services/firebase';
+import { isMessageThreadOpen, messageService } from '../../services/firebase';
 import type { ClinicianStackParamList, InboxThread, PatientSummary } from '../../types';
 import AppScreen from '../../components/common/AppScreen';
 
@@ -62,6 +62,20 @@ export default function ClinicianInboxScreen() {
     navigation.navigate(Screen.clinicianMessages, { patient });
   };
 
+  const previewFor = (item: InboxRow): string => {
+    if (!('threadId' in item) || !item.threadId) {
+      return 'Start conversation';
+    }
+    const thread = item as InboxThread;
+    if (isMessageThreadOpen(thread)) {
+      return thread.lastMessage ?? 'Conversation open';
+    }
+    if (thread.status === 'closed') {
+      return 'Conversation ended — tap to restart';
+    }
+    return 'Start conversation';
+  };
+
   return (
     <AppScreen style={styles.safe}>
       <View style={styles.header}>
@@ -101,7 +115,7 @@ export default function ClinicianInboxScreen() {
                   needsAttention: false,
                 };
             const unread = 'clinicianUnread' in item ? (item.clinicianUnread ?? 0) : 0;
-            const preview = 'lastMessage' in item ? item.lastMessage : undefined;
+            const preview = previewFor(item);
             const time = 'lastMessageAt' in item ? item.lastMessageAt : undefined;
 
             return (
@@ -118,9 +132,12 @@ export default function ClinicianInboxScreen() {
                       </Text>
                     ) : null}
                   </View>
+                  {patient.email ? (
+                    <Text style={styles.email} numberOfLines={1}>{patient.email}</Text>
+                  ) : null}
                   <View style={styles.rowBottom}>
                     <Text style={styles.preview} numberOfLines={1}>
-                      {preview ?? 'Start a conversation'}
+                      {preview}
                     </Text>
                     {unread > 0 ? (
                       <View style={styles.badge}>
@@ -163,8 +180,9 @@ const styles = StyleSheet.create({
   rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: Spacing.sm },
   name: { flex: 1, fontSize: Typography.size.base, fontWeight: '700', color: Colors.text },
   time: { fontSize: Typography.size.xs, color: Colors.textTertiary },
+  email: { fontSize: Typography.size.sm, color: Colors.textSecondary },
   rowBottom: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  preview: { flex: 1, fontSize: Typography.size.sm, color: Colors.textSecondary },
+  preview: { flex: 1, fontSize: Typography.size.sm, color: Colors.textTertiary },
   badge: {
     minWidth: 22, height: 22, borderRadius: 11,
     backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6,

@@ -31,11 +31,11 @@ export const TERMS_SECTIONS: LegalSection[] = [
   },
   {
     title: '8. Age Policy',
-    body: 'You must be at least 16 years old to create an account. The app is not directed at children under 16. If you believe we have collected data from someone under 16, contact support@wellnessshift.co.uk and we will delete it.',
+    body: 'You must be at least 16 years old to create an account. The app is not directed at children under 16. If you believe we have collected data from someone under 16, contact support@wellnesshift.co.uk and we will delete it.',
   },
   {
     title: '9. Governing Law',
-    body: 'These terms are governed by the laws of England and Wales. Wellness Shift Ltd, United Kingdom. Contact: support@wellnessshift.co.uk.',
+    body: 'These terms are governed by the laws of England and Wales. Wellness Shift Ltd, United Kingdom. Contact: support@wellnesshift.co.uk.',
   },
 ];
 
@@ -78,7 +78,7 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
   },
   {
     title: '10. Your GDPR Rights',
-    body: 'Under UK GDPR you may access, correct, export, or delete your data. Use Data Rights in the app or email support@wellnessshift.co.uk.',
+    body: 'Under UK GDPR you may access, correct, export, or delete your data. Use Data Rights in the app or email support@wellnesshift.co.uk.',
   },
   {
     title: '11. Retention',
@@ -86,7 +86,7 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
   },
   {
     title: '12. Contact',
-    body: 'Wellness Shift Ltd · support@wellnessshift.co.uk · United Kingdom',
+    body: 'Wellness Shift Ltd · support@wellnesshift.co.uk · United Kingdom',
   },
 ];
 

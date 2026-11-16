@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { AppCard, FilterChip, ListRow, ScreenHeader } from '../../components/ui';
 import {
   CONTENT_LIBRARY_CATEGORIES,
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: Typography.size.base, color: Colors.text, padding: 0 },
   filterRow: { paddingHorizontal: Spacing.base, paddingBottom: Spacing.sm, gap: Spacing.sm },
-  list: { padding: Spacing.base },
+  list: { padding: Spacing.base, paddingBottom: tabBarScrollPadding },
   emoji: { fontSize: 20 },
   empty: { alignItems: 'center', paddingTop: Spacing['3xl'], gap: Spacing.sm },
   emptyTitle: { fontSize: Typography.size.lg, fontWeight: '700', color: Colors.text },

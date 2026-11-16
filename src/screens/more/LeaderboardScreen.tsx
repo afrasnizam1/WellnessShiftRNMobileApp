@@ -6,8 +6,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AppScreen from '../../components/common/AppScreen';
-import { AppCard } from '../../components/ui';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { AppCard, ScreenHeader } from '../../components/ui';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { useAppStore } from '../../store';
 import { Screen } from '../../navigation/screenNames';
 import { socialService, type AccountabilityBoardEntry } from '../../services/socialService';
@@ -116,10 +116,11 @@ export default function LeaderboardScreen() {
   return (
     <AppScreen style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Community Progress</Text>
-          <Text style={styles.subtitle}>Celebrating collective wellness achievements</Text>
-        </View>
+        <ScreenHeader
+          title="Community Progress"
+          subtitle="Celebrating collective wellness achievements"
+          onBack={() => navigation.goBack()}
+        />
 
         <AppCard style={styles.filterCard}>
           <View style={styles.filterButtons}>
@@ -254,7 +255,7 @@ const styles = StyleSheet.create({
     padding: Spacing.base, 
     paddingTop: Spacing.xl, 
     gap: Spacing.md, 
-    paddingBottom: Spacing['2xl'] 
+    paddingBottom: tabBarScrollPadding 
   },
   header: {
     alignItems: 'center',

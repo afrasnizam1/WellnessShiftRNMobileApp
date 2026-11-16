@@ -44,9 +44,14 @@ export const appConfig = {
   enableDevSubscriptionBypass: false,
   devSubscriptionTier: 'growth' as 'free' | 'growth' | 'pro',
 
-  websiteUrl: 'https://wellnessshift.co.uk',
-  privacyPolicyUrl: 'https://wellnessshift.co.uk/privacy',
-  termsOfServiceUrl: 'https://wellnessshift.co.uk/terms',
+  websiteUrl: 'https://wellnesshift.co.uk',
+  privacyPolicyUrl: 'https://wellnesshift.co.uk/privacy',
+  termsOfServiceUrl: 'https://wellnesshift.co.uk/terms',
+  supportUrl: 'https://wellnesshift.co.uk/support',
+  medicalDisclaimerUrl: 'https://wellnesshift.co.uk/medical-disclaimer',
+  aiTransparencyUrl: 'https://wellnesshift.co.uk/ai-transparency',
+  supportEmail: 'support@wellnesshift.co.uk',
+  privacyEmail: 'privacy@wellnesshift.co.uk',
 
   /**
    * Remote welcome video after account creation.
@@ -60,8 +65,9 @@ export const appConfig = {
 
   /** Crashlytics + App Check — require isFirebaseConfigured: true */
   enableCrashlytics: true,
-  enableAppCheck: false,
-  /** Register in Firebase Console → App Check → Debug tokens, then paste here for dev */
+  /** Enforce App Check in production; skipped in __DEV__ unless appCheckDebugToken is set. */
+  enableAppCheck: true,
+  /** Register in Firebase Console → App Check → Debug tokens, then paste here for Simulator/dev */
   appCheckDebugToken: '',
 
   /**
@@ -80,6 +86,12 @@ export const appConfig = {
   enableSocialFeed: false,
   enableCommunityLeaderboard: false,
   enablePremiumShop: false,
+  /** Local-only fake community. Keep off until posts are real. */
+  enableCommunityForum: false,
+  /** Local-only coach booking. Keep off until sessions are real. */
+  enableCoachingBookings: false,
+  /** Local-only “subscribed” alert. Keep off until a real list exists. */
+  enableNewsletterSignup: false,
   /** false = hide Google Sign-In for v1 (Apple + email only). */
   enableGoogleSignIn: false,
 

@@ -1,7 +1,22 @@
-import { WELLNESS_ASSESSMENT_QUESTIONS } from '../data/wellnessAssessmentQuestions';
+import {
+  DEEPER_CHECKIN_QUESTIONS,
+  WELLNESS_ASSESSMENT_QUESTIONS,
+} from '../data/wellnessAssessmentQuestions';
 import type { WellnessCategoryKey, WellnessCategoryScores, WellnessScore } from '../types';
 
 export type AssessmentAnswerMap = Record<string, number>;
+
+export function mergeAssessmentAnswers(
+  previous: AssessmentAnswerMap | null | undefined,
+  incoming: AssessmentAnswerMap,
+): AssessmentAnswerMap {
+  return { ...(previous ?? {}), ...incoming };
+}
+
+export function isDeeperCheckInComplete(answers: AssessmentAnswerMap | null | undefined): boolean {
+  if (!answers) return false;
+  return DEEPER_CHECKIN_QUESTIONS.every((question) => answers[question.id] != null);
+}
 
 /** Quiz answers are 1–5; wellness scores across the app remain on a 0–10 scale. */
 export function quizAnswerToWellnessScore(answer: number): number {

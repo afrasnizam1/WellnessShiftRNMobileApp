@@ -1,5 +1,5 @@
 import React, { memo, useState } from 'react';
-import { View, Text, StyleSheet, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, type StyleProp, type ViewStyle } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Colors, Typography, Spacing, Radius } from '../../theme';
@@ -9,9 +9,10 @@ import type { LearningGuide } from '../../data/learningGuides';
 type Props = {
   guide: LearningGuide;
   onPress: () => void;
+  style?: StyleProp<ViewStyle>;
 };
 
-function FeaturedGuideCard({ guide, onPress }: Props) {
+function FeaturedGuideCard({ guide, onPress, style }: Props) {
   const [imageFailed, setImageFailed] = useState(false);
   const imageSource = guide.image ?? (guide.imageUrl ? { uri: guide.imageUrl } : null);
   const useImage = !!imageSource && !imageFailed;
@@ -38,7 +39,7 @@ function FeaturedGuideCard({ guide, onPress }: Props) {
   );
 
   return (
-    <AnimatedPressable style={styles.card} onPress={onPress}>
+    <AnimatedPressable style={[styles.card, style]} onPress={onPress}>
       {useImage ? (
         <ImageBackground
           source={imageSource}

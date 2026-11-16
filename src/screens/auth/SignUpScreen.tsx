@@ -15,6 +15,7 @@ import { firebaseAuth, userService } from '../../services/firebase';
 import { ensurePendingOnboardingApplied } from '../../services/applyPendingOnboarding';
 import { signInWithApple, signInWithGoogle, resolveCurrentUserProfile } from '../../services/socialAuth';
 import { contentsquareService } from '../../services/contentsquareService';
+import { firebaseAnalytics } from '../../services/firebaseAnalytics';
 import { useAppStore } from '../../store';
 import type { UserGender, UserRole } from '../../types';
 import { onboardingStorage } from '../../services/onboardingStorage';
@@ -48,11 +49,13 @@ export default function SignUpScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const savePlan = route.params?.savePlan === true;
+  const initialRole: UserRole = route.params?.role === 'clinician' ? 'clinician' : 'patient';
+  const skipToForm = savePlan || route.params?.role === 'clinician';
   const { setUser, setWellnessScore, setAuthLoading, setSubscriptionTier, setHasSeenIntro, setClinicianProfileReady } = useAppStore();
 
-  const [mode, setMode] = useState<'landing' | 'form'>(savePlan ? 'form' : 'landing');
+  const [mode, setMode] = useState<'landing' | 'form'>(skipToForm ? 'form' : 'landing');
   const [showRolePicker, setShowRolePicker] = useState(false);
-  const [role, setRole] = useState<UserRole>('patient');
+  const [role, setRole] = useState<UserRole>(initialRole);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -244,6 +247,7 @@ export default function SignUpScreen() {
       const profile = await ensurePendingOnboardingApplied(cred.user.uid);
       if (profile) {
         setUser(profile);
+        firebaseAnalytics.logSignUp('email').catch(() => {});
         await contentsquareService.onAuthSuccess(profile);
       }
     } catch (err: unknown) {
@@ -267,6 +271,7 @@ export default function SignUpScreen() {
         if (profile) {
           profile = (await ensurePendingOnboardingApplied(profile.uid)) ?? profile;
           setUser(profile);
+          firebaseAnalytics.logSignUp('apple').catch(() => {});
           await contentsquareService.onAuthSuccess(profile);
         }
       } catch (err: any) {
@@ -290,6 +295,7 @@ export default function SignUpScreen() {
         if (profile) {
           profile = (await ensurePendingOnboardingApplied(profile.uid)) ?? profile;
           setUser(profile);
+          firebaseAnalytics.logSignUp('google').catch(() => {});
           await contentsquareService.onAuthSuccess(profile);
         }
       } catch (err: any) {
@@ -387,7 +393,13 @@ export default function SignUpScreen() {
           nestedScrollEnabled
         >
           <TouchableOpacity
-            onPress={() => setMode('landing')}
+            onPress={() => {
+              if (skipToForm && navigation.canGoBack()) {
+                navigation.goBack();
+                return;
+              }
+              setMode('landing');
+            }}
             style={styles.closeBtn}
             accessibilityRole="button"
             accessibilityLabel="Close"
@@ -488,15 +500,17 @@ export default function SignUpScreen() {
                     </View>
                     {errors.gender ? <Text style={styles.errorText}>{errors.gender}</Text> : null}
                   </View>
-                  <View style={styles.metricsRow}>
+                  <View style={styles.metricsColumn}>
                     <View style={styles.metricField}>
-                      <Text style={styles.metricLabel}>Height</Text>
-                      <SegmentedControl
-                        options={['cm', 'ft']}
-                        value={heightUnit}
-                        onChange={switchHeightUnit}
-                        compact
-                      />
+                      <View style={styles.metricHeader}>
+                        <Text style={styles.metricLabel}>Height</Text>
+                        <SegmentedControl
+                          options={['cm', 'ft']}
+                          value={heightUnit}
+                          onChange={switchHeightUnit}
+                          compact
+                        />
+                      </View>
                       {heightUnit === 'cm' ? (
                         <AppTextField
                           leftIcon="resize-outline"
@@ -512,6 +526,7 @@ export default function SignUpScreen() {
                       ) : (
                         <View style={styles.ftInRow}>
                           <View style={styles.ftInField}>
+                            <Text style={styles.ftInLabel}>Feet</Text>
                             <AppTextField
                               placeholder="5"
                               keyboardType="number-pad"
@@ -520,10 +535,15 @@ export default function SignUpScreen() {
                                 setHeightFtDisplay(v);
                                 setErrors((e) => ({ ...e, heightCm: undefined }));
                               }}
+                              containerStyle={styles.ftInInputWrap}
+                              fieldStyle={styles.ftInInputField}
+                              style={styles.ftInInput}
+                              maxLength={1}
+                              accessibilityLabel="Height feet"
                             />
-                            <Text style={styles.ftInUnit}>ft</Text>
                           </View>
                           <View style={styles.ftInField}>
+                            <Text style={styles.ftInLabel}>Inches</Text>
                             <AppTextField
                               placeholder="10"
                               keyboardType="decimal-pad"
@@ -532,8 +552,12 @@ export default function SignUpScreen() {
                                 setHeightInDisplay(v);
                                 setErrors((e) => ({ ...e, heightCm: undefined }));
                               }}
+                              containerStyle={styles.ftInInputWrap}
+                              fieldStyle={styles.ftInInputField}
+                              style={styles.ftInInput}
+                              maxLength={4}
+                              accessibilityLabel="Height inches"
                             />
-                            <Text style={styles.ftInUnit}>in</Text>
                           </View>
                         </View>
                       )}
@@ -542,13 +566,15 @@ export default function SignUpScreen() {
                       ) : null}
                     </View>
                     <View style={styles.metricField}>
-                      <Text style={styles.metricLabel}>Weight</Text>
-                      <SegmentedControl
-                        options={['kg', 'lb', 'st']}
-                        value={weightUnit === 'stone' ? 'st' : weightUnit}
-                        onChange={(v) => switchWeightUnit(v === 'st' ? 'stone' : (v as WeightUnit))}
-                        compact
-                      />
+                      <View style={styles.metricHeader}>
+                        <Text style={styles.metricLabel}>Weight</Text>
+                        <SegmentedControl
+                          options={['kg', 'lb', 'st']}
+                          value={weightUnit === 'stone' ? 'st' : weightUnit}
+                          onChange={(v) => switchWeightUnit(v === 'st' ? 'stone' : (v as WeightUnit))}
+                          compact
+                        />
+                      </View>
                       <AppTextField
                         leftIcon="scale-outline"
                         placeholder={weightUnit === 'kg' ? 'e.g. 70' : weightUnit === 'lb' ? 'e.g. 154' : 'e.g. 11.3'}
@@ -640,7 +666,10 @@ export default function SignUpScreen() {
             </LinearGradient>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => navigation.navigate(Screen.signIn)} style={styles.switchRow}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate(Screen.signIn, { role })}
+            style={styles.switchRow}
+          >
             <Text style={styles.switchPrompt}>Already have an account? </Text>
             <Text style={styles.switchLink}>Sign In</Text>
           </TouchableOpacity>
@@ -694,8 +723,8 @@ function RolePickerModal({
               <Ionicons name="medkit-outline" size={24} color={Colors.brand} />
             </View>
             <View style={modalStyles.roleInfo}>
-              <Text style={modalStyles.roleTitle}>Clinician / Doctor</Text>
-              <Text style={modalStyles.roleDesc}>Manage patients and care plans</Text>
+              <Text style={modalStyles.roleTitle}>Professional</Text>
+              <Text style={modalStyles.roleDesc}>Doctor, clinician, surgeon, physiotherapist, or physical therapist</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={Colors.textTertiary} />
           </TouchableOpacity>
@@ -766,12 +795,36 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   genderChipTextSelected: { color: Colors.primary },
-  metricsRow: { flexDirection: 'row', gap: Spacing.md },
-  metricField: { flex: 1, gap: Spacing.xs },
+  metricsColumn: { gap: Spacing.md },
+  metricField: { gap: Spacing.sm },
+  metricHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.md,
+  },
   metricLabel: { fontSize: Typography.size.sm, fontWeight: '600', color: Colors.text },
-  ftInRow: { flexDirection: 'row', gap: Spacing.xs, alignItems: 'flex-end' },
-  ftInField: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  ftInUnit: { fontSize: Typography.size.sm, color: Colors.textSecondary, fontWeight: '600', marginBottom: Spacing.md },
+  ftInRow: { flexDirection: 'row', gap: Spacing.md },
+  ftInField: { flex: 1, gap: Spacing.xs },
+  ftInLabel: {
+    fontSize: Typography.size.xs,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  ftInInputWrap: { flexGrow: 1 },
+  ftInInputField: {
+    minHeight: 56,
+    justifyContent: 'center',
+    paddingVertical: Spacing.md,
+  },
+  ftInInput: {
+    textAlign: 'center',
+    fontSize: Typography.size.xl,
+    fontWeight: '700',
+    minHeight: 28,
+  },
   termsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm, marginTop: Spacing.sm },
   checkbox: {
     width: 22, height: 22, borderRadius: 6,

@@ -4,7 +4,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
+import { Colors, Typography, Spacing, Radius, Shadow, tabBarScrollPadding } from '../../theme';
 import AppScreen from '../../components/common/AppScreen';
 import HologramViewer from '../../components/fitness/HologramViewer';
 import { IconBadge, SegmentedControl } from '../../components/ui';
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  content: { padding: Spacing.base, gap: Spacing.md },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   viewerCard: {
     borderRadius: Radius.xl,
     borderWidth: 1,

@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import AppScreen from '../../components/common/AppScreen';
 import { appConfig } from '../../config/appConfig';
 import { Screen } from '../../navigation/screenNames';
@@ -19,16 +19,17 @@ const DOCS: Record<DocKey, { title: string; sections: LegalSection[]; web?: { ur
   privacy: {
     title: 'Privacy Policy',
     sections: PRIVACY_SECTIONS,
-    web: { url: appConfig.privacyPolicyUrl, label: 'View full policy at wellnessshift.co.uk →' },
+    web: { url: appConfig.privacyPolicyUrl, label: 'View full policy at wellnesshift.co.uk →' },
   },
   terms: {
     title: 'Terms of Service',
     sections: TERMS_SECTIONS,
-    web: { url: appConfig.termsOfServiceUrl, label: 'View full terms at wellnessshift.co.uk →' },
+    web: { url: appConfig.termsOfServiceUrl, label: 'View full terms at wellnesshift.co.uk →' },
   },
   ai: {
-    title: 'AI Disclosure',
+    title: 'Wellness Coach disclosure',
     sections: AI_DISCLOSURE_SECTIONS,
+    web: { url: appConfig.aiTransparencyUrl, label: 'View coach transparency at wellnesshift.co.uk →' },
   },
   health: {
     title: 'Health Data Disclosure',
@@ -96,7 +97,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.text,
   },
-  content: { padding: Spacing.base, gap: Spacing.lg },
+  content: { padding: Spacing.base, gap: Spacing.lg, paddingBottom: tabBarScrollPadding },
   updated: { fontSize: Typography.size.xs, color: Colors.textTertiary },
   section: { gap: Spacing.xs },
   sectionTitle: { fontSize: Typography.size.base, fontWeight: '700', color: Colors.text },

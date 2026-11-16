@@ -159,7 +159,7 @@ export function buildAnalyticsAiSummary(input: AnalyticsSummaryInput): Analytics
     return {
       headline: 'Complete your wellness assessment first',
       body:
-        'There isn’t enough scored data to summarise yet. Take the wellness assessment, sync health data, and log a few check-ins — then Summarize with AI will highlight what’s going well versus what needs work.',
+        'There isn’t enough scored data to summarise yet. Take the wellness assessment, sync health data, and log a few check-ins — then Summarise with Coach will highlight what’s going well versus what needs work.',
       strengths: [],
       improvements: ['Take the wellness assessment to unlock category scores.'],
     };

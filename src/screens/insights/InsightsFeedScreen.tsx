@@ -7,7 +7,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
-import { Colors, Typography, Spacing, Radius, Gradients, WELLNESS_CATEGORIES } from '../../theme';
+import { Colors, Typography, Spacing, Radius, Gradients, WELLNESS_CATEGORIES, tabBarScrollPadding } from '../../theme';
 import { ScreenHeader, FilterChip, AnimatedPressable, CategoryIcon, BrandButton, IconBadge } from '../../components/ui';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore } from '../../store';
@@ -164,7 +164,7 @@ export default function InsightsFeedScreen() {
     <AppScreen style={styles.safe}>
       <View style={styles.header}>
         <ScreenHeader
-          title="Ai insights"
+          title="Wellness Coach"
           subtitle={lastRefreshed
             ? `Updated ${lastRefreshed.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
             : 'Refreshes with today\'s activity and your assessment.'}
@@ -212,6 +212,27 @@ export default function InsightsFeedScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
+          <AnimatedPressable
+            style={styles.chatCTA}
+            onPress={() => navigation.navigate(Screen.aiHealthCoach)}
+          >
+            <LinearGradient colors={[...Gradients.brand]} style={StyleSheet.absoluteFill} />
+            <View style={styles.chatCTAContent}>
+              <View style={styles.chatCTAIcon}>
+                <Ionicons name="sparkles" size={22} color={Colors.white} />
+              </View>
+              <View style={styles.chatCTAInfo}>
+                <Text style={styles.chatCTATitle}>Chat with Wellness Coach</Text>
+                <Text style={styles.chatCTASub}>
+                  {subscriptionTier === 'free'
+                    ? 'Free: 5 messages per day'
+                    : 'Unlimited — ask anything about your wellness'}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.85)" />
+            </View>
+          </AnimatedPressable>
+
           <View style={styles.personalizationBanner}>
             <Ionicons name="information-circle-outline" size={18} color={Colors.brand} />
             <Text style={styles.personalizationText}>{personalizationNote}</Text>
@@ -221,14 +242,14 @@ export default function InsightsFeedScreen() {
             <View style={styles.aiHeader}>
               <IconBadge name="sparkles-outline" color={Colors.brand} size="sm" />
               <View style={{ flex: 1 }}>
-                <Text style={styles.aiTitle}>AI analytics summary</Text>
+                <Text style={styles.aiTitle}>Coach summary</Text>
                 <Text style={styles.aiSub}>
                   What’s going well vs what needs improvement — based on your scores, activity & habits.
                 </Text>
               </View>
             </View>
             <BrandButton
-              label={summarising ? 'Summarising…' : aiSummary ? 'Refresh summary' : 'Summarize with AI'}
+              label={summarising ? 'Summarising…' : aiSummary ? 'Refresh summary' : 'Summarise with Coach'}
               onPress={runAiSummary}
               loading={summarising}
             />
@@ -261,27 +282,6 @@ export default function InsightsFeedScreen() {
               </View>
             ) : null}
           </View>
-
-          <AnimatedPressable
-            style={styles.chatCTA}
-            onPress={() => navigation.navigate(Screen.aiHealthCoach)}
-          >
-            <LinearGradient colors={[...Gradients.brand]} style={StyleSheet.absoluteFill} />
-            <View style={styles.chatCTAContent}>
-              <View style={styles.chatCTAIcon}>
-                <Ionicons name="sparkles" size={22} color={Colors.white} />
-              </View>
-              <View style={styles.chatCTAInfo}>
-                <Text style={styles.chatCTATitle}>Chat with Wellness Coach</Text>
-                <Text style={styles.chatCTASub}>
-                  {subscriptionTier === 'free'
-                    ? 'Free: 5 messages per day'
-                    : 'Unlimited — ask anything about your wellness'}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.85)" />
-            </View>
-          </AnimatedPressable>
 
           {filtered.length > 0 && (
             <View style={styles.expandRow}>
@@ -504,7 +504,7 @@ const styles = StyleSheet.create({
   filterRow: { paddingRight: Spacing.base },
 
   scroll: { flex: 1 },
-  scrollContent: { padding: Spacing.base, gap: Spacing.md },
+  scrollContent: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
 
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md },
   loadingText: { fontSize: Typography.size.base, color: Colors.textSecondary },

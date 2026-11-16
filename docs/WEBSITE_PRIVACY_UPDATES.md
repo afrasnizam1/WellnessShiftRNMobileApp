@@ -1,12 +1,12 @@
 # Website privacy updates (paste into CMS)
 
-The app repo cannot edit https://wellnessshift.co.uk. Paste these replacements into your privacy (and AI transparency) pages so they match `src/data/legalContent.ts`.
+The app repo cannot edit https://wellnesshift.co.uk. Paste these replacements into your privacy (and AI transparency) pages so they match `src/data/legalContent.ts`.
 
 ## 1. Age policy
 
 **Replace** any “13–16 / parental consent” wording **with:**
 
-> You must be at least 16 years old to create an App account. The App is not directed at children under 16. If you believe we have collected data from someone under 16, contact support@wellnessshift.co.uk and we will delete it.
+> You must be at least 16 years old to create an App account. The App is not directed at children under 16. If you believe we have collected data from someone under 16, contact support@wellnesshift.co.uk and we will delete it.
 
 ## 2. Crash reporting & analytics (Contentsquare)
 

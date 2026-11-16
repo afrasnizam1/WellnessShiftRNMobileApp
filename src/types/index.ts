@@ -19,6 +19,10 @@ export interface UserProfile {
   linkedPatients?: string[];  // set on clinician
   onboardingComplete: boolean;
   quizComplete: boolean;
+  /** Second 10 assessment questions completed after onboarding. */
+  deeperCheckInComplete?: boolean;
+  /** Saved quiz answers (onboarding + optional deeper 10). Used to merge scores. */
+  quizAnswers?: Record<string, number>;
   primaryGoal?: string;       // top priority goal from onboarding
   healthGoals?: string[];     // all goals selected during onboarding
   /** High-level “why are you here” from purpose selection */
@@ -424,9 +428,18 @@ export interface Message {
   isRead: boolean;
 }
 
+/** Clinician-controlled conversation lifecycle. */
+export type MessageThreadStatus = 'open' | 'closed';
+
 export interface MessageThread {
   patientId: string;
   clinicianId: string;
+  /** open = both can message; closed = clinician ended; missing + lastMessageAt = legacy open */
+  status?: MessageThreadStatus;
+  startedAt?: string;
+  startedBy?: string;
+  closedAt?: string;
+  closedBy?: string;
   lastMessage?: string;
   lastMessageAt?: string;
   lastSenderId?: string;
@@ -458,7 +471,6 @@ export interface SubscriptionProduct {
 import { Screen } from '../navigation/screenNames';
 
 type AuthNestedScreen =
-  | typeof Screen.authLanding
   | typeof Screen.signIn
   | typeof Screen.createAccount
   | typeof Screen.chooseRole;
@@ -486,7 +498,7 @@ export type RootStackParamList = {
   [Screen.onboardingBaseline]: undefined;
   [Screen.firstWinActivity]: undefined;
   [Screen.assessmentPath]: undefined;
-  [Screen.wellnessQuiz]: undefined;
+  [Screen.wellnessQuiz]: { mode?: 'onboarding' | 'deeper' } | undefined;
   [Screen.buildingWellnessPlan]: undefined;
   [Screen.wellnessResults]: undefined;
   [Screen.quizCategoryDetail]: { category: WellnessCategoryKey };
@@ -525,7 +537,7 @@ export type MyCareStackParamList = {
 
 export type ClinicianTabParamList = {
   [Screen.clinicianDashboard]: undefined;
-  [Screen.patients]: undefined;
+  [Screen.patients]: { attentionOnly?: boolean } | undefined;
   [Screen.clinicianAnalytics]: undefined;
   [Screen.clinicianSettings]: undefined;
 };
@@ -543,6 +555,10 @@ export type FitnessStackParamList = {
   [Screen.vitaminsLearning]: undefined;
   [Screen.nutritionBasics]: undefined;
   [Screen.learningGuide]: { topicId: string };
+  [Screen.learningGuides]: undefined;
+  [Screen.lungHealth]: undefined;
+  [Screen.targetedTreatment]: undefined;
+  [Screen.multipleMyeloma]: undefined;
   [Screen.guidedProgram]: { module: FitnessModule };
   [Screen.mealPlanner]: undefined;
   [Screen.highProteinMeals]: undefined;
@@ -556,7 +572,9 @@ export type FitnessStackParamList = {
 };
 
 export type ClinicianStackParamList = {
-  [Screen.clinicianTabs]: { screen?: keyof ClinicianTabParamList; params?: undefined } | undefined;
+  [Screen.clinicianTabs]:
+    | { screen?: keyof ClinicianTabParamList; params?: ClinicianTabParamList[keyof ClinicianTabParamList] }
+    | undefined;
   [Screen.clinicianInbox]: undefined;
   [Screen.editClinicianProfile]: undefined;
   [Screen.clinicianHelp]: undefined;

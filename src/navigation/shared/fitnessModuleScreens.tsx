@@ -6,6 +6,9 @@ import GuidedProgramScreen from '../../screens/fitness/GuidedProgramScreen';
 import HealthTopicScreen from '../../screens/fitness/HealthTopicScreen';
 import HealthTrackerScreen from '../../screens/fitness/HealthTrackerScreen';
 import LearningGuideDetailScreen from '../../screens/fitness/LearningGuideDetailScreen';
+import LungHealthScreen from '../../screens/fitness/LungHealthScreen';
+import TargetedTreatmentScreen from '../../screens/fitness/TargetedTreatmentScreen';
+import MultipleMyelomaScreen from '../../screens/fitness/MultipleMyelomaScreen';
 import MealPlannerScreen from '../../screens/fitness/MealPlannerScreen';
 import HighProteinMealsScreen from '../../screens/fitness/HighProteinMealsScreen';
 import OrganHealthNutritionScreen from '../../screens/fitness/OrganHealthNutritionScreen';
@@ -37,6 +40,9 @@ export const FITNESS_MODULE_SCREEN_CONFIG = [
   { name: Screen.vitaminsLearning, component: VitaminsLearningScreen },
   { name: Screen.nutritionBasics, component: NutritionBasicsLearningScreen },
   { name: Screen.learningGuide, component: LearningGuideDetailScreen },
+  { name: Screen.lungHealth, component: LungHealthScreen },
+  { name: Screen.targetedTreatment, component: TargetedTreatmentScreen },
+  { name: Screen.multipleMyeloma, component: MultipleMyelomaScreen },
   { name: Screen.activityDashboard, component: ActivityDashboardScreen },
 ] as const;
 

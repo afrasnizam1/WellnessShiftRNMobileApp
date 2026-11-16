@@ -6,7 +6,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Screen } from '../../navigation/screenNames';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { AppCard, ScreenHeader } from '../../components/ui';
 import { useAppStore } from '../../store';
 import { habitService, type Habit, type HabitFrequency } from '../../services/habitService';
@@ -160,11 +160,11 @@ export default function HabitTrackingScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.base, gap: Spacing.md },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   empty: { alignItems: 'center', padding: Spacing.xl, gap: Spacing.sm },
   emptyTitle: { fontSize: Typography.size.base, fontWeight: '700', color: Colors.text },
   emptySub: { fontSize: Typography.size.sm, color: Colors.textSecondary, textAlign: 'center' },
-  list: { gap: Spacing.md },
+  list: { gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   habitCard: { padding: Spacing.md },
   habitRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   habitEmoji: { fontSize: 24 },

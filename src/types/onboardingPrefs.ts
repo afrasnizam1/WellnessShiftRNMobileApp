@@ -10,14 +10,29 @@ export type AppPurpose =
   | 'all';
 
 /**
- * Clear eligibility for clinician linking — patients with a health concern
- * who have been referred by their GP (invite code required).
+ * Shown on first launch and wherever someone connects with a professional.
+ * Linking uses the professional's invite code.
  */
 export const CLINICIAN_CONNECT_ELIGIBILITY =
-  'Clinician connection is only for patients who have a health issue and whose GP has referred them to a clinician on Wellness Shift. You will need the invite code they give you.';
+  'You can connect with a professional on Wellness Shift. Doctors, clinicians, neurosurgeons, physiotherapists, physical therapists, and other registered practitioners can share a care plan and message you. Ask them for their invite code, then enter it in My Care. This is support and education, not a diagnosis. It is not a directory and not a drop-in booking service.';
 
 export const CLINICIAN_CONNECT_SHORT =
-  'Only if your GP referred you for a health issue — invite code required';
+  'Doctor, physio, or therapist. Use their invite code in My Care';
+
+/** Professions a professional account can register as. */
+export const PROFESSIONAL_SPECIALTIES = [
+  'General Practice',
+  'Neurosurgery',
+  'Physiotherapy',
+  'Physical Therapy',
+  'Cardiology',
+  'Dermatology',
+  'Psychiatry',
+  'Nutrition',
+  'Sports Medicine',
+  'Occupational Therapy',
+  'Other',
+] as const;
 
 export const APP_PURPOSE_OPTIONS: {
   id: AppPurpose;
@@ -45,14 +60,14 @@ export const APP_PURPOSE_OPTIONS: {
   },
   {
     id: 'clinician',
-    title: 'Connect with a clinician (GP referral)',
+    title: 'Connect with a professional',
     subtitle: CLINICIAN_CONNECT_SHORT,
     icon: 'medkit-outline',
   },
   {
     id: 'all',
     title: 'All of the above',
-    subtitle: 'Score, learning, fitness — plus clinician link only if your GP referred you',
+    subtitle: 'Score, learning, fitness, and a link to your doctor or therapist',
     icon: 'apps-outline',
   },
 ];

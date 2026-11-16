@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
+import { Colors, Typography, Spacing, Radius, Shadow, tabBarScrollPadding } from '../../theme';
 import { ScreenHeader } from '../../components/ui';
 import { useAppStore } from '../../store';
 import { clinicianService, normalizeInviteCode, formatClinicianConnectedMessage } from '../../services/clinicianService';
@@ -62,14 +62,19 @@ export default function ConnectClinicianScreen() {
       Alert.alert('Connected!', formatClinicianConnectedMessage(info ?? {}));
       navigation.goBack();
     } catch (err: any) {
-      const message = err?.message ?? '';
+      const message = String(err?.message ?? err ?? '');
       if (message.includes('permission-denied')) {
         Alert.alert(
           'Could not connect',
           'Your account could not be linked right now. Please try again in a moment, or ask your clinician to send a connection request instead.',
         );
+      } else if (/invalid invite code/i.test(message)) {
+        Alert.alert(
+          'Code not found',
+          'Check the six-character code from your clinician. Spaces do not matter. If it still fails, ask them to share it again from their dashboard.',
+        );
       } else {
-        Alert.alert('Error', message || 'Invalid or expired code.');
+        Alert.alert('Could not connect', message || 'Something went wrong. Try again.');
       }
     } finally {
       setConnecting(false);
@@ -84,7 +89,7 @@ export default function ConnectClinicianScreen() {
           <Text style={styles.eligibilityTitle}>Who this is for</Text>
           <Text style={styles.eligibilityBody}>{CLINICIAN_CONNECT_ELIGIBILITY}</Text>
           <Text style={styles.eligibilityNote}>
-            If you have not been referred by your GP, you can still use Wellness Shift for your
+            If you do not have an invite code yet, you can still use Wellness Shift for your
             wellness score, learning, and fitness — without linking a clinician.
           </Text>
         </View>
@@ -107,8 +112,7 @@ export default function ConnectClinicianScreen() {
         <View style={styles.connectCard}>
           <Text style={styles.connectTitle}>Enter invite code</Text>
           <Text style={styles.connectSub}>
-            Your GP-referred clinician generates this from their dashboard. Enter it only if they
-            gave it to you for your care.
+            Your doctor, clinician, neurosurgeon, physiotherapist, or physical therapist creates this code in their app. Enter it when they give it to you.
           </Text>
           <TextInput
             style={styles.codeInput}
@@ -135,7 +139,7 @@ export default function ConnectClinicianScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.base, gap: Spacing.md },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   eligibilityCard: {
     backgroundColor: 'rgba(242, 77, 128, 0.08)',
     borderRadius: Radius.xl,

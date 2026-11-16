@@ -4,11 +4,10 @@ import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, TextInput,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { Colors, Typography, Spacing, Radius, Shadow, tabBarScrollPadding } from '../../theme';
 import AppScreen from '../../components/common/AppScreen';
-import FuturisticModuleGlyph from '../../components/fitness/FuturisticModuleGlyph';
 import { useAppStore } from '../../store';
 import { gamificationService } from '../../services/gamificationService';
 import {
@@ -177,7 +176,11 @@ function MemoryMatch({ onScore }: { onScore: (s: number) => void }) {
             style={[styles.memCard, c.matched && styles.memCardDone, c.flipped && styles.memCardFlipped]}
             onPress={() => flip(i)}
           >
-            <Text style={styles.memCardText}>{c.flipped || c.matched ? c.emoji : '❓'}</Text>
+            {c.flipped || c.matched ? (
+              <Text style={styles.memCardText}>{c.emoji}</Text>
+            ) : (
+              <Ionicons name="sparkles" size={18} color="rgba(255,255,255,0.88)" />
+            )}
           </TouchableOpacity>
         ))}
       </View>
@@ -991,11 +994,13 @@ function FocusTraining({ onScore }: { onScore: (s: number) => void }) {
                 width: t.size,
                 height: t.size,
                 borderRadius: t.size / 2,
-                backgroundColor: t.type === 'primary' ? '#3498DB' : '#E74C3C',
+                backgroundColor: t.type === 'primary' ? Colors.primary : Colors.error,
               } as object,
             ]}
             onPress={() => tap(t)}
-          />
+          >
+            <Text style={styles.focusGlyph}>{t.type === 'primary' ? '🎯' : '⚡️'}</Text>
+          </TouchableOpacity>
         ))}
       </View>
     </View>
@@ -1261,7 +1266,6 @@ function MentalRotation({ onScore }: { onScore: (s: number) => void }) {
 export default function BrainGameScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const insets = useSafeAreaInsets();
   const user = useAppStore((s) => s.user);
   const initId = (route.params?.gameId ?? '') as GameId;
   const [activeGame, setActiveGame] = useState<GameId | null>(
@@ -1325,13 +1329,13 @@ export default function BrainGameScreen() {
   };
 
   const activeInfo = GAMES.find((g) => g.id === activeGame);
-  const bottomPad = Math.max(insets.bottom, 16) + 48;
+  const bottomPad = tabBarScrollPadding;
 
   return (
     <AppScreen style={styles.safe}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => (activeGame ? exitGame() : navigation.goBack())} style={styles.backBtn}>
-          <Text style={styles.backText}>‹</Text>
+        <TouchableOpacity onPress={() => (activeGame ? exitGame() : navigation.goBack())} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Back">
+          <Ionicons name="chevron-back" size={22} color={Colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{activeInfo?.title ?? 'Brain Games'}</Text>
         {activeGame && <Text style={styles.scoreChip}>{totalScore} pts</Text>}
@@ -1346,8 +1350,8 @@ export default function BrainGameScreen() {
           </Text>
           {GAMES.map((g) => (
             <TouchableOpacity key={g.id} style={styles.gameCard} onPress={() => startGame(g.id)}>
-              <View style={[styles.gameCardIcon, { backgroundColor: g.color + '1A', borderColor: g.color + '55' }]}>
-                <FuturisticModuleGlyph moduleId={g.id} color={g.color} size={36} />
+              <View style={[styles.gameCardIcon, { backgroundColor: g.color + '18' }]}>
+                <Text style={styles.gameCardEmoji}>{g.icon}</Text>
               </View>
               <View style={styles.gameCardInfo}>
                 <Text style={styles.gameCardTitle}>{g.title}</Text>
@@ -1356,7 +1360,7 @@ export default function BrainGameScreen() {
                 </Text>
                 <Text style={styles.gameCardDesc}>{g.desc}</Text>
               </View>
-              <Text style={styles.chevron}>›</Text>
+              <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} />
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -1384,23 +1388,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.md,
-    backgroundColor: Colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    paddingVertical: Spacing.sm,
+    backgroundColor: Colors.background,
   },
-  backBtn: { width: 40 },
-  backText: { fontSize: 32, color: Colors.primary, lineHeight: 38 },
-  headerTitle: { flex: 1, textAlign: 'center', fontSize: Typography.size.base, fontWeight: '700', color: Colors.text },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surface,
+    ...Shadow.sm,
+  },
+  headerTitle: { flex: 1, textAlign: 'center', fontSize: Typography.size.base, fontWeight: '700', color: Colors.text, letterSpacing: -0.2 },
   scoreChip: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.text,
     color: Colors.white,
     fontSize: Typography.size.xs,
     fontWeight: '700',
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: Radius.xl,
+    paddingVertical: 6,
+    borderRadius: Radius.full,
     overflow: 'hidden',
+    minWidth: 60,
+    textAlign: 'center',
   },
 
   gameList: { padding: Spacing.base, gap: Spacing.md },
@@ -1410,32 +1421,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    backgroundColor: Colors.white,
-    borderRadius: Radius.lg,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.xl,
     padding: Spacing.base,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
     ...Shadow.sm,
   },
   gameCardIcon: {
     width: 52,
     height: 52,
-    borderRadius: 14,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
   },
+  gameCardEmoji: { fontSize: 26 },
   gameCardInfo: { flex: 1, gap: 2 },
   gameCardTitle: { fontSize: Typography.size.base, fontWeight: '700', color: Colors.text },
   domainTag: { fontSize: Typography.size.xs, color: Colors.primary, fontWeight: '600' },
   gameCardDesc: { fontSize: Typography.size.xs, color: Colors.textSecondary, marginTop: 2, lineHeight: 16 },
-  chevron: { fontSize: 20, color: Colors.textTertiary },
-
   gameContainer: { padding: Spacing.base, flexGrow: 1 },
   gameIntro: {
-    gap: Spacing.sm,
+    gap: 6,
     marginBottom: Spacing.md,
     padding: Spacing.md,
-    backgroundColor: Colors.primaryBg,
-    borderRadius: Radius.lg,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
   },
   benefitText: { fontSize: Typography.size.sm, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
   tipText: { fontSize: Typography.size.xs, color: Colors.textTertiary, textAlign: 'center', lineHeight: 18 },
@@ -1449,35 +1462,47 @@ const styles = StyleSheet.create({
   tierRow: { flexDirection: 'row', gap: Spacing.sm },
   tierChip: {
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.xl,
-    borderWidth: 1.5,
+    paddingVertical: 8,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
     borderColor: Colors.border,
   },
-  tierChipOn: { backgroundColor: Colors.primaryBg, borderColor: Colors.primary },
+  tierChipOn: { backgroundColor: Colors.text, borderColor: Colors.text },
   tierChipText: {
     fontSize: Typography.size.xs,
     color: Colors.textSecondary,
-    fontWeight: '600',
+    fontWeight: '700',
     textTransform: 'capitalize',
   },
-  tierChipTextOn: { color: Colors.primary },
+  tierChipTextOn: { color: Colors.white },
   gameWrap: { gap: Spacing.lg, alignItems: 'center', paddingTop: Spacing.xl },
   gameStat: { fontSize: Typography.size.sm, color: Colors.textSecondary, textAlign: 'center' },
   doneMsg: { fontSize: Typography.size.xl, fontWeight: '700', color: Colors.success, textAlign: 'center' },
 
-  memGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, justifyContent: 'center' },
+  memGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center', width: '100%' },
   memCard: {
-    width: 72,
-    height: 72,
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.lg,
+    width: 74,
+    height: 86,
+    backgroundColor: '#241536',
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    ...Shadow.sm,
   },
-  memCardFlipped: { backgroundColor: Colors.primaryBg, borderWidth: 2, borderColor: Colors.primary },
-  memCardDone: { backgroundColor: Colors.success + '22', borderWidth: 2, borderColor: Colors.success },
-  memCardText: { fontSize: 28 },
+  memCardFlipped: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  memCardDone: {
+    backgroundColor: Colors.successLight,
+    borderWidth: 1,
+    borderColor: 'rgba(52, 199, 89, 0.35)',
+  },
+  memCardText: { fontSize: 32 },
 
   reactionBox: {
     width: '100%',
@@ -1498,30 +1523,46 @@ const styles = StyleSheet.create({
   },
   retryBtnText: { color: Colors.white, fontWeight: '700' },
 
-  mathQ: { fontSize: 48, fontWeight: '700', color: Colors.text },
+  mathQ: { fontSize: 48, fontWeight: '800', color: Colors.text, letterSpacing: -1 },
   mathFeedback: { fontSize: Typography.size.lg, fontWeight: '700' },
   mathInput: {
-    borderWidth: 2,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
     borderColor: Colors.border,
-    borderRadius: Radius.lg,
+    borderRadius: Radius.xl,
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.md,
     fontSize: 28,
     fontWeight: '700',
     color: Colors.text,
     textAlign: 'center',
-    width: '60%',
+    width: '70%',
+    ...Shadow.sm,
   },
   mathBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.xl,
+    backgroundColor: Colors.text,
+    borderRadius: Radius.full,
     paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
+    paddingVertical: 14,
+    minWidth: 160,
+    alignItems: 'center',
   },
   mathBtnText: { color: Colors.white, fontSize: Typography.size.base, fontWeight: '700' },
 
-  colorQuestion: { alignItems: 'center', paddingVertical: Spacing.xl, gap: Spacing.md },
-  colorWord: { fontSize: 56, fontWeight: '900' },
+  colorQuestion: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xl,
+    gap: Spacing.md,
+    width: '100%',
+    minHeight: 180,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    ...Shadow.sm,
+  },
+  colorWord: { fontSize: 52, fontWeight: '900', letterSpacing: 2 },
   colorFeedback: { fontSize: Typography.size['2xl'], fontWeight: '700' },
   colorBtns: { flexDirection: 'row', gap: Spacing.lg },
   colorBtn: { borderRadius: Radius.xl, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.base },
@@ -1533,12 +1574,19 @@ const styles = StyleSheet.create({
   resultWord: { fontSize: Typography.size.base, color: Colors.text },
 
   patternGrid: { flexDirection: 'row', flexWrap: 'wrap', width: 156, gap: 6 },
-  patternCell: { width: 48, height: 48, borderRadius: 8, backgroundColor: Colors.border },
-  patternCellOn: { backgroundColor: Colors.primary },
+  patternCell: { width: 48, height: 48, borderRadius: 12, backgroundColor: Colors.backgroundAlt },
+  patternCellOn: { backgroundColor: Colors.purple },
   patternOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md, justifyContent: 'center' },
-  patternOption: { padding: Spacing.sm, backgroundColor: Colors.white, borderRadius: Radius.lg, ...Shadow.sm },
+  patternOption: {
+    padding: Spacing.sm,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    ...Shadow.sm,
+  },
   patternGridSmall: { flexDirection: 'row', flexWrap: 'wrap', width: 72, gap: 3 },
-  patternCellSmall: { width: 22, height: 22, borderRadius: 4, backgroundColor: Colors.border },
+  patternCellSmall: { width: 22, height: 22, borderRadius: 6, backgroundColor: Colors.backgroundAlt },
   passageText: {
     fontSize: Typography.size.base,
     color: Colors.text,
@@ -1549,25 +1597,28 @@ const styles = StyleSheet.create({
 
   focusArena: {
     width: '100%',
-    height: 320,
-    backgroundColor: Colors.surface,
+    height: 340,
+    backgroundColor: '#16141F',
     borderRadius: Radius.xl,
     position: 'relative',
     overflow: 'hidden',
   },
-  focusTarget: { position: 'absolute' },
+  focusTarget: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
+  focusGlyph: { fontSize: 18 },
 
   visualGrid: { gap: 4 },
   visualRow: { flexDirection: 'row', gap: 4 },
-  visualCell: { width: 48, height: 48, borderRadius: 8, backgroundColor: Colors.border },
-  visualCellOn: { backgroundColor: Colors.primary },
+  visualCell: { width: 48, height: 48, borderRadius: 12, backgroundColor: Colors.backgroundAlt },
+  visualCellOn: { backgroundColor: Colors.purple },
 
   rotationOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md, justifyContent: 'center' },
   rotationOption: {
     alignItems: 'center',
     padding: Spacing.sm,
-    backgroundColor: Colors.white,
-    borderRadius: Radius.lg,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
     ...Shadow.sm,
   },
 });

@@ -5,7 +5,7 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { Screen } from '../../navigation/screenNames';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { AppCard, ScreenHeader, SegmentedControl } from '../../components/ui';
 import { FORUM_GROUPS, FORUM_POSTS, type ForumPost } from '../../data/forumData';
 import AppScreen from '../../components/common/AppScreen';
@@ -118,7 +118,7 @@ export default function ForumScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   header: { paddingHorizontal: Spacing.base, paddingTop: Spacing.sm, gap: Spacing.sm },
-  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: Spacing['3xl'] },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   searchWrap: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
     backgroundColor: Colors.surfaceSecondary, borderRadius: Radius.md, paddingHorizontal: Spacing.md, paddingVertical: 10,

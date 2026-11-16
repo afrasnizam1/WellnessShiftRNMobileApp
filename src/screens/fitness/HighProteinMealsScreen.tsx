@@ -12,7 +12,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Colors, Typography, Spacing, Radius } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { AppCard, AnimatedPressable, ScreenHeader } from '../../components/ui';
 import AppScreen from '../../components/common/AppScreen';
 import {
@@ -206,7 +206,7 @@ function MealDetailModal({
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  content: { paddingBottom: Spacing['3xl'], gap: Spacing.md },
+  content: { paddingBottom: tabBarScrollPadding, gap: Spacing.md },
   hero: {
     marginHorizontal: Spacing.base,
     height: 160,
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     textAlign: 'center',
   },
-  modalContent: { padding: Spacing.base, paddingBottom: Spacing['3xl'], gap: Spacing.sm },
+  modalContent: { padding: Spacing.base, paddingBottom: tabBarScrollPadding, gap: Spacing.sm },
   modalImage: {
     width: '100%',
     height: 200,

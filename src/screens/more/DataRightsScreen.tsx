@@ -5,11 +5,12 @@ import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Share,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, Radius, Shadow } from '../../theme';
+import { Colors, Typography, Spacing, Radius, Shadow, tabBarScrollPadding } from '../../theme';
 import { useAppStore } from '../../store';
 import { deleteCurrentUserAccount } from '../../services/accountDeletion';
 import { userService } from '../../services/firebase';
 import AppScreen from '../../components/common/AppScreen';
+import { appConfig } from '../../config/appConfig';
 
 export default function DataRightsScreen() {
   const navigation = useNavigation<any>();
@@ -108,7 +109,7 @@ export default function DataRightsScreen() {
       action: async () => {
         Alert.alert(
           'Request submitted',
-          'Email privacy@wellnessshift.co.uk to request a processing restriction. We respond within 30 days.',
+          `Email ${appConfig.privacyEmail} to request a processing restriction. We respond within 30 days.`,
         );
       },
     },
@@ -120,7 +121,7 @@ export default function DataRightsScreen() {
       action: async () => {
         Alert.alert(
           'Request submitted',
-          'Contact support@wellnessshift.co.uk with your objection. You can also turn off analytics in Profile.',
+          `Contact ${appConfig.supportEmail} with your objection. You can also turn off analytics in Profile.`,
         );
       },
     },
@@ -163,7 +164,7 @@ export default function DataRightsScreen() {
             }
           </TouchableOpacity>
         ))}
-        <Text style={styles.footer}>Questions? Contact us at support@wellnessshift.co.uk</Text>
+        <Text style={styles.footer}>Questions? Contact us at {appConfig.supportEmail}</Text>
         <View style={{ height: Spacing.xl }} />
       </ScrollView>
     </AppScreen>
@@ -176,7 +177,7 @@ const styles = StyleSheet.create({
   backBtn: { width: 40 },
   backText: { fontSize: 32, color: Colors.primary, lineHeight: 38 },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: Typography.size.base, fontWeight: '700', color: Colors.text },
-  content: { padding: Spacing.base, gap: Spacing.md },
+  content: { padding: Spacing.base, gap: Spacing.md, paddingBottom: tabBarScrollPadding },
   intro: { backgroundColor: Colors.primaryBg, borderRadius: Radius.lg, padding: Spacing.base, gap: Spacing.xs },
   introTitle: { fontSize: Typography.size.base, fontWeight: '700', color: Colors.primary },
   introBody: { fontSize: Typography.size.sm, color: Colors.textSecondary, lineHeight: 20 },
