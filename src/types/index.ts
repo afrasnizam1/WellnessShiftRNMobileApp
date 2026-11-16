@@ -553,6 +553,7 @@ export type FitnessStackParamList = {
   [Screen.stepsDetail]: undefined;
   [Screen.premiumShop]: undefined;
   [Screen.organHealthNutrition]: undefined;
+  [Screen.healthHologram3d]: undefined;
 };
 
 export type ClinicianStackParamList = {
