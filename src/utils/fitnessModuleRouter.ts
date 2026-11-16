@@ -27,7 +27,8 @@ export type FitnessScreenName =
   | typeof Screen.activityDashboard
   | typeof Screen.stepsDetail
   | typeof Screen.premiumShop
-  | typeof Screen.organHealthNutrition;
+  | typeof Screen.organHealthNutrition
+  | typeof Screen.healthHologram3d;
 
 export type FitnessRoute = {
   screen: FitnessScreenName;
@@ -46,6 +47,7 @@ export function getRouteForModule(module: FitnessModule): FitnessRoute {
       }
       return { screen: Screen.healthTracker, params: { trackerId: module.id } };
     case 'anatomy':
+      if (module.id === 'health-3d-view') return { screen: Screen.healthHologram3d };
       return { screen: Screen.anatomyViewer, params: { modelId: module.id } };
     case 'education':
       if (module.id === 'stress-assessment' || module.id === 'stress-assessment-tool') {

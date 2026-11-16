@@ -32,6 +32,7 @@ const MODULE_OVERRIDES: Record<string, IoniconName> = {
   'five-minute-calm': 'timer-outline',
   'tension-release': 'body-outline',
   'evening-unwind': 'moon',
+  'health-3d-view': 'planet-outline',
   'heart-hologram': 'pulse',
   'heart-lungs-hologram': 'heart-circle-outline',
   'heart-conduction-system': 'git-network-outline',

@@ -21,6 +21,7 @@ import ActivityDashboardScreen from '../../screens/home/ActivityDashboardScreen'
 import StepsDetailScreen from '../../screens/home/StepsDetailScreen';
 import PremiumShopScreen from '../../screens/fitness/PremiumShopScreen';
 import OrganHealthNutritionScreen from '../../screens/fitness/OrganHealthNutritionScreen';
+import HealthHologram3DScreen from '../../screens/fitness/HealthHologram3DScreen';
 import FoodScanScreen from '../../screens/home/FoodScanScreen';
 import BodyMetricsScreen from '../../screens/home/BodyMetricsScreen';
 import HealthRecordsScreen from '../../screens/home/HealthRecordsScreen';
@@ -57,6 +58,7 @@ export default function FitnessStackNavigator() {
       <Stack.Screen name={Screen.stepsDetail} component={StepsDetailScreen} />
       <Stack.Screen name={Screen.premiumShop} component={PremiumShopScreen} />
       <Stack.Screen name={Screen.organHealthNutrition} component={OrganHealthNutritionScreen} />
+      <Stack.Screen name={Screen.healthHologram3d} component={HealthHologram3DScreen} />
     </Stack.Navigator>
   );
 }

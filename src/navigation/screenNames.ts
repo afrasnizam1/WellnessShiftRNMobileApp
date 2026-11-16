@@ -74,6 +74,7 @@ export const Screen = {
   virtualTwin: 'Virtual Twin',
   premiumShop: 'Premium Shop',
   organHealthNutrition: 'Organ Health & Nutrition',
+  healthHologram3d: 'Health 3D View',
 
   // AI Insights stack
   aiInsightsFeed: 'AI Insights Feed',

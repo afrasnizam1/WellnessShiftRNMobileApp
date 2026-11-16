@@ -32,6 +32,7 @@ const CORE_MODULES: FitnessModule[] = [
   { id: 'evening-unwind',     title: 'Evening Unwind',            subtitle: 'Relaxation sequence before bed',              category: 'mindBody',     icon: '🕯️',  color: Colors.sleep,      isPremium: false, wellnessCategory: 'sleep', domain: 'Sleep', exploreTags: ['Sleep', 'Mindfulness'] },
 
   // 3D Anatomy — native iOS USDZ holograms only
+  { id: 'health-3d-view',     title: 'Your Health in 3D',         subtitle: 'Your daily rings and organ holograms',         category: 'anatomy',      icon: '🌐',  color: '#EC4F96',         isPremium: false },
   { id: 'heart-hologram',     title: 'Beating Heart Hologram',    subtitle: 'Interactive 3D heart anatomy',                 category: 'anatomy',      icon: '❤️',  color: '#E74C3C',         isPremium: false },
   { id: 'heart-lungs-hologram', title: 'Heart & Lungs Hologram',  subtitle: 'Combined cardio-respiratory anatomy',        category: 'anatomy',      icon: '🫀',  color: '#C0392B',         isPremium: false },
   { id: 'heart-conduction-system', title: 'Heart & Bronchial Airways', subtitle: 'Heart with bronchial tree in 3D',       category: 'anatomy',      icon: '💓',  color: '#E74C3C',         isPremium: false },
