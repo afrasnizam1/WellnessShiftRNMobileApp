@@ -3,21 +3,11 @@
  * Uses the same wellness score and categories as the score card below it.
  * Tapping a segment selects that category on both.
  */
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  AccessibilityInfo,
-  Animated,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  type LayoutChangeEvent,
-} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { AccessibilityInfo, Platform, Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import type { WellnessCategoryKey, WellnessScore } from '../../../types';
 import { WELLNESS_CATEGORIES } from '../../../theme';
 import { analyticsHelper } from '../../../services/analyticsHelper';
-import { scoreLabel, scoreLabelColor } from '../../analytics/chartInteraction';
 import WellnessSphereView from './WellnessSphereView';
 import {
   HUD_CATEGORY_COUNT,
@@ -41,6 +31,7 @@ type Props = {
   csqScreen: string;
 };
 
+const MONO = Platform.select({ ios: 'Menlo', default: 'monospace' });
 const HUD = {
   card: '#0F1118',
   stage: '#07080D',
@@ -53,14 +44,11 @@ const HUD = {
   track: '#1A1F29',
   accent: '#EC4F96',
   amber: '#F7B267',
-  up: '#34C759', // improvement reads as good news, not pink
+  up: '#EC4F96',
   down: '#F2665E',
 };
 
 const HOME_CATEGORIES = WELLNESS_CATEGORIES.slice(0, HUD_CATEGORY_COUNT);
-/** The drag/tap hint shows on the first visit only, then fades. */
-const HINT_SEEN_KEY = 'bodyHud.hintSeen.v1';
-const HINT_MS = 5000;
 
 function BodyHudCard({
   uid,
@@ -95,40 +83,15 @@ function BodyHudCard({
     0,
     rings.findIndex((r) => r.categoryKey === selectedCategory),
   );
-  // No pause button: the sphere follows the phone's Reduce Motion setting.
   const [paused, setPaused] = useState(false);
   const [stageW, setStageW] = useState(0);
 
   useEffect(() => {
+    // Respect Reduce Motion — start paused, the user can still spin it.
     AccessibilityInfo.isReduceMotionEnabled()
-      .then(setPaused)
+      .then((on) => on && setPaused(true))
       .catch(() => {});
-    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setPaused);
-    return () => sub.remove();
   }, []);
-
-  // First-visit hint ("Drag to rotate · tap an area"), faded out after a few seconds or on first tap.
-  const [showHint, setShowHint] = useState(false);
-  const hintOpacity = useRef(new Animated.Value(1)).current;
-  const hideHint = useCallback(() => {
-    Animated.timing(hintOpacity, { toValue: 0, duration: 400, useNativeDriver: true }).start(() =>
-      setShowHint(false),
-    );
-    AsyncStorage.setItem(HINT_SEEN_KEY, '1').catch(() => {});
-  }, [hintOpacity]);
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    AsyncStorage.getItem(HINT_SEEN_KEY)
-      .then((seen) => {
-        if (seen) return;
-        setShowHint(true);
-        timer = setTimeout(hideHint, HINT_MS);
-      })
-      .catch(() => {});
-    return () => {
-      if (timer) clearTimeout(timer);
-    };
-  }, [hideHint]);
 
   const focusRing = rings[selectedIndex] ?? rings[0];
 
@@ -138,7 +101,6 @@ function BodyHudCard({
       if (!r?.categoryKey) return;
       // A second tap on the sphere keeps the wedge selected and facing forward.
       if (source === 'ring' || r.categoryKey !== selectedCategory) onSelectCategory(r.categoryKey);
-      if (showHint) hideHint();
       analyticsHelper.trackChartCategoryTap({
         screen: csqScreen,
         chart: source === 'sphere' ? 'Body HUD Sphere' : 'Body HUD Rings',
@@ -146,13 +108,16 @@ function BodyHudCard({
         category_key: r.categoryKey,
       });
     },
-    [rings, csqScreen, onSelectCategory, selectedCategory, showHint, hideHint],
+    [rings, csqScreen, onSelectCategory, selectedCategory],
   );
   const onSpherePick = useCallback((i: number) => select(i, 'sphere'), [select]);
 
-  // Centre glow and status follow the overall score band (green good → red low).
-  const bandColor = hasScore ? scoreLabelColor(overall) : HUD.dim;
-  const focusChosen = selectedCategory != null && rings.some((r) => r.categoryKey === selectedCategory);
+  const togglePause = useCallback(() => {
+    setPaused((p) => {
+      analyticsHelper.trackFeatureInteraction('Body HUD', p ? 'resume_spin' : 'pause_spin', csqScreen);
+      return !p;
+    });
+  }, [csqScreen]);
 
   const onStageLayout = (e: LayoutChangeEvent) => setStageW(Math.round(e.nativeEvent.layout.width));
   // Sphere sits in its own slot. Labels live in bands above and below it,
@@ -166,23 +131,41 @@ function BodyHudCard({
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.brand}>
-          <View style={[styles.logo, { borderColor: bandColor }]}>
-            <View style={[styles.logoInner, { borderColor: bandColor }]} />
+          <View style={styles.logo}>
+            <View style={styles.logoInner} />
           </View>
           <View style={styles.flexShrink}>
             <Text style={styles.title} numberOfLines={1}>
-              Wellness Index
+              WELLNESS INDEX
             </Text>
             <Text style={styles.sub} numberOfLines={1}>
-              {rings.length} areas
+              composite of 8 domains
             </Text>
           </View>
         </View>
-        {!hasScore ? (
-          <View style={styles.sampleBadge}>
-            <Text style={styles.sampleText}>No score yet</Text>
-          </View>
-        ) : null}
+        <View style={styles.headerRight}>
+          {hasScore ? (
+            <View style={styles.syncRow}>
+              <View style={styles.syncDot} />
+              <Text style={styles.syncText} numberOfLines={1}>
+                Linked to score
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.sampleBadge}>
+              <Text style={styles.sampleText}>NO SCORE YET</Text>
+            </View>
+          )}
+          <Pressable
+            onPress={togglePause}
+            style={({ pressed }) => [styles.pauseBtn, pressed && styles.pressed]}
+            accessibilityRole="button"
+            accessibilityLabel={paused ? 'Resume sphere spin' : 'Pause sphere spin'}
+            testID="body_hud_pause_spin"
+          >
+            <Text style={styles.pauseText}>{paused ? 'Resume spin' : 'Pause spin'}</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Sphere stage */}
@@ -195,19 +178,26 @@ function BodyHudCard({
           .map((r) => `${r.name} ${r.hasData ? r.valueLabel : 'no score'} out of 10`)
           .join(', ')}. Wellness score ${hasScore ? overall.toFixed(1) : 'not set'} out of 10.`}
       >
-        {/* Only once someone has picked an area */}
-        {focusChosen ? (
-          <View style={styles.chipRow} pointerEvents="none">
-            <View style={styles.chip}>
-              <Text style={styles.chipText}>
-                Focus{' '}
-                <Text style={[styles.chipStrong, { color: focusRing.color }]}>
-                  {focusRing.name} {focusRing.hasData ? focusRing.valueLabel : '—'}
-                </Text>
+        <View style={styles.stageHead} pointerEvents="none">
+          <Text style={styles.stageLabel}>WELLNESS SPHERE · 3D</Text>
+          <Text style={styles.stageLabelR}>tap a segment to focus</Text>
+        </View>
+
+        <View style={styles.chipRow} pointerEvents="none">
+          <View style={styles.chip}>
+            <Text style={styles.chipText}>
+              FOCUS{' '}
+              <Text style={[styles.chipStrong, { color: focusRing.color }]}>
+                {focusRing.name.toUpperCase()} {focusRing.hasData ? focusRing.valueLabel : '—'}
               </Text>
-            </View>
+            </Text>
           </View>
-        ) : null}
+          <View style={styles.chip}>
+            <Text style={styles.chipText}>
+              <Text style={styles.chipStrongW}>DRAG</Text> to rotate
+            </Text>
+          </View>
+        </View>
 
         <View style={[styles.sphereSlot, { height: sphereH }]}>
           <WellnessSphereView
@@ -217,61 +207,39 @@ function BodyHudCard({
             paused={paused}
             active={focused}
             onPick={onSpherePick}
-            coreColor={bandColor}
           />
-          {/* The score as real text over the sphere — always sharp and read by screen readers. */}
-          <View style={styles.scoreOverlay} pointerEvents="none">
-            <View style={styles.scoreLine}>
-              <Text style={styles.scoreNum}>{hasScore ? overall.toFixed(1) : '—'}</Text>
-              <Text style={styles.scoreOf}>/10</Text>
-            </View>
-            {hasScore ? (
-              <Text style={[styles.scoreBand, { color: bandColor }]}>{scoreLabel(overall)}</Text>
-            ) : null}
-            {delta != null && delta !== 0 ? (
-              <Text style={[styles.delta, { color: delta > 0 ? HUD.up : HUD.down }]}>
-                {delta > 0 ? '▲' : '▼'} {Math.abs(delta).toFixed(1)} this week
-              </Text>
-            ) : null}
-          </View>
         </View>
 
-        {showHint ? (
-          <Animated.View style={[styles.hintRow, { opacity: hintOpacity }]} pointerEvents="none">
-            <Text style={styles.hintText}>Drag to rotate · tap an area to focus</Text>
-          </Animated.View>
-        ) : null}
-
-        {/* Only good news here: hidden when zero */}
-        {streakDays > 0 || closed > 0 ? (
-          <View style={styles.chipRow} pointerEvents="none">
-            {streakDays > 0 ? (
-              <View style={styles.chip}>
-                <Text style={styles.chipText}>
-                  <Text style={styles.chipStrongW}>{streakDays}</Text>-day streak
-                </Text>
-              </View>
-            ) : (
-              <View />
-            )}
-            {closed > 0 ? (
-              <View style={styles.chip}>
-                <Text style={styles.chipText}>
-                  <Text style={styles.chipStrongW}>
-                    {closed} of {rings.length}
-                  </Text>{' '}
-                  areas at 10
-                </Text>
-              </View>
-            ) : null}
+        <View style={styles.chipRow} pointerEvents="none">
+          <View style={styles.chip}>
+            <Text style={styles.chipText}>
+              STREAK <Text style={styles.chipStrongW}>{streakDays} {streakDays === 1 ? 'day' : 'days'}</Text>
+            </Text>
           </View>
+          <View style={styles.chip}>
+            <Text style={styles.chipText}>
+              AT 10 <Text style={styles.chipStrongW}>{closed} / {rings.length}</Text>
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Score */}
+      <View style={styles.scoreRow} accessible accessibilityLabel={`Wellness score ${hasScore ? overall.toFixed(1) : 'not set'} out of 10`}>
+        <Text style={styles.scoreLabel}>WELLNESS SCORE</Text>
+        <Text style={styles.scoreNum}>{hasScore ? overall.toFixed(1) : '—'}</Text>
+        <Text style={styles.scoreOf}>/ 10</Text>
+        {delta != null && delta !== 0 ? (
+          <Text style={[styles.delta, { color: delta > 0 ? HUD.up : HUD.down }]}>
+            {delta > 0 ? '▲' : '▼'} {Math.abs(delta).toFixed(1)} vs last week
+          </Text>
         ) : null}
       </View>
 
       {/* Category rings — same set and order as the score card */}
       <View style={styles.ringsHead}>
-        <Text style={styles.ringsLabel}>Your areas</Text>
-        <Text style={styles.ringsCount}>tap to focus</Text>
+        <Text style={styles.ringsLabel}>CATEGORIES</Text>
+        <Text style={styles.ringsCount}>{rings.length} linked</Text>
       </View>
       <View style={styles.grid}>
         {rings.map((r, i) => (
@@ -371,8 +339,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logoInner: { width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: HUD.accent },
-  title: { color: HUD.text, fontSize: 16, fontWeight: '700', letterSpacing: -0.2 },
+  title: { color: HUD.text, fontSize: 14, fontWeight: '800', letterSpacing: 1.2 },
   sub: { color: HUD.muted, fontSize: 11, marginTop: 1 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   sampleBadge: {
     borderWidth: 1,
     borderColor: HUD.amber + '99',
@@ -380,7 +349,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 4,
   },
-  sampleText: { color: HUD.amber, fontSize: 11, fontWeight: '700' },
+  sampleText: { color: HUD.amber, fontSize: 9.5, fontWeight: '700', letterSpacing: 1, fontFamily: MONO },
+  syncRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  syncDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: HUD.accent },
+  syncText: { color: HUD.muted, fontSize: 11 },
+  pauseBtn: {
+    borderWidth: 1,
+    borderColor: HUD.line2,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    minHeight: 34,
+    justifyContent: 'center',
+  },
+  pauseText: { color: HUD.text, fontSize: 12, fontWeight: '600' },
 
   stage: {
     backgroundColor: HUD.stage,
@@ -392,6 +374,15 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 10,
   },
+  stageHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  stageLabel: { color: HUD.muted, fontSize: 9.5, letterSpacing: 1.2, fontFamily: MONO, flexShrink: 1 },
+  stageLabelR: { color: HUD.dim, fontSize: 9.5, fontFamily: MONO, flexShrink: 1, textAlign: 'right' },
   chipRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -399,51 +390,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sphereSlot: {
-    marginVertical: 6,
+    marginVertical: 8,
   },
-  scoreOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scoreLine: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
-  scoreNum: {
-    color: HUD.text,
-    fontSize: 52,
-    fontWeight: '800',
-    fontVariant: ['tabular-nums'],
-    letterSpacing: -1.5,
-    textShadowColor: 'rgba(0,0,0,0.75)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 12,
-  },
-  scoreOf: {
-    color: HUD.muted,
-    fontSize: 16,
-    fontWeight: '600',
-    textShadowColor: 'rgba(0,0,0,0.75)',
-    textShadowRadius: 8,
-  },
-  scoreBand: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginTop: 2,
-    textShadowColor: 'rgba(0,0,0,0.75)',
-    textShadowRadius: 8,
-  },
-  delta: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 4,
-    textShadowColor: 'rgba(0,0,0,0.75)',
-    textShadowRadius: 8,
-  },
-  hintRow: { alignItems: 'center', marginBottom: 6 },
-  hintText: { color: HUD.dim, fontSize: 11.5 },
   chip: {
     backgroundColor: HUD.chip,
     borderWidth: 1,
@@ -453,14 +401,27 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     flexShrink: 1,
   },
-  chipText: { color: HUD.muted, fontSize: 11.5 },
+  chipText: { color: HUD.muted, fontSize: 9.5, letterSpacing: 0.6, fontFamily: MONO },
   chipStrong: { fontWeight: '700' },
   chipStrongW: { color: HUD.text, fontWeight: '700' },
 
+  scoreRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: 5,
+    paddingTop: 8,
+    paddingBottom: 2,
+  },
+  scoreLabel: { color: HUD.muted, fontSize: 10, letterSpacing: 1.4, fontFamily: MONO },
+  scoreNum: { color: HUD.text, fontSize: 28, fontWeight: '800', fontVariant: ['tabular-nums'], letterSpacing: -0.6 },
+  scoreOf: { color: HUD.muted, fontSize: 12 },
+  delta: { fontSize: 12, fontWeight: '600', marginLeft: 4 },
 
   ringsHead: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4, marginBottom: 6 },
-  ringsLabel: { color: HUD.muted, fontSize: 12, fontWeight: '600' },
-  ringsCount: { color: HUD.dim, fontSize: 12 },
+  ringsLabel: { color: HUD.muted, fontSize: 10, letterSpacing: 1.4, fontFamily: MONO },
+  ringsCount: { color: HUD.dim, fontSize: 10, fontFamily: MONO },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 6 },
   tile: {
     width: '48.8%',
