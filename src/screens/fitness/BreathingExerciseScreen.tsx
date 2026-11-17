@@ -5,10 +5,16 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Animated,
+  Animated as RNAnimated,
   Easing,
   ScrollView,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
@@ -29,10 +35,16 @@ export default function BreathingExerciseScreen() {
   const [countdown, setCountdown] = useState(0);
   const [cycles, setCycles] = useState(0);
   const [totalCycles] = useState(4);
-  const animScale = useRef(new Animated.Value(1)).current;
-  const animOpacity = useRef(new Animated.Value(0.6)).current;
+  const animScale = useRef(new RNAnimated.Value(1)).current;
+  const animOpacity = useRef(new RNAnimated.Value(0.6)).current;
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const running = useRef(false);
+  
+  // Gesture handling for dragging the orb
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const contextX = useSharedValue(0);
+  const contextY = useSharedValue(0);
 
   const phaseLabels: Record<Phase, string> = {
     idle: 'Tap to begin',
@@ -50,17 +62,42 @@ export default function BreathingExerciseScreen() {
     rest: Colors.mental,
   };
 
+  // Pan gesture for dragging the orb
+  const panGesture = Gesture.Pan()
+    .onStart(() => {
+      contextX.value = translateX.value;
+      contextY.value = translateY.value;
+    })
+    .onUpdate((event) => {
+      translateX.value = contextX.value + event.translationX;
+      translateY.value = contextY.value + event.translationY;
+    })
+    .onEnd(() => {
+      // Spring back to center with a smooth animation
+      translateX.value = withSpring(0, { damping: 15, stiffness: 150 });
+      translateY.value = withSpring(0, { damping: 15, stiffness: 150 });
+    });
+
+  const gestureStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+      ],
+    };
+  });
+
   const animatePhase = (p: Phase, duration: number) => {
     const toScale = p === 'inhale' ? 1.4 : p === 'exhale' || p === 'rest' ? 0.8 : 1.1;
     const toOpacity = p === 'inhale' ? 1 : p === 'exhale' ? 0.5 : 0.8;
-    Animated.parallel([
-      Animated.timing(animScale, {
+    RNAnimated.parallel([
+      RNAnimated.timing(animScale, {
         toValue: toScale,
         duration: duration * 1000 * 0.9,
         useNativeDriver: true,
         easing: Easing.inOut(Easing.ease),
       }),
-      Animated.timing(animOpacity, {
+      RNAnimated.timing(animOpacity, {
         toValue: toOpacity,
         duration: duration * 1000 * 0.9,
         useNativeDriver: true,
@@ -115,10 +152,13 @@ export default function BreathingExerciseScreen() {
     if (intervalRef.current) clearInterval(intervalRef.current);
     setPhase('idle');
     setCountdown(0);
-    Animated.parallel([
-      Animated.timing(animScale, { toValue: 1, duration: 500, useNativeDriver: true }),
-      Animated.timing(animOpacity, { toValue: 0.6, duration: 500, useNativeDriver: true }),
+    RNAnimated.parallel([
+      RNAnimated.timing(animScale, { toValue: 1, duration: 500, useNativeDriver: true }),
+      RNAnimated.timing(animOpacity, { toValue: 0.6, duration: 500, useNativeDriver: true }),
     ]).start();
+    // Reset gesture position
+    translateX.value = withSpring(0);
+    translateY.value = withSpring(0);
   };
 
   useEffect(
@@ -160,17 +200,21 @@ export default function BreathingExerciseScreen() {
         <View style={styles.sessionBody}>
           <Text style={styles.sessionTechName}>{selectedTech.name}</Text>
           <View style={styles.circleWrap}>
-            <Animated.View
-              style={[
-                styles.circleOuter,
-                { borderColor: color, transform: [{ scale: animScale }], opacity: animOpacity },
-              ]}
-            >
-              <Animated.View style={[styles.circleInner, { backgroundColor: color + '33' }]}>
-                <Text style={[styles.phaseLabel, { color }]}>{phaseLabels[phase]}</Text>
-                {countdown > 0 ? <Text style={[styles.countdown, { color }]}>{countdown}</Text> : null}
+            <GestureDetector gesture={panGesture}>
+              <Animated.View style={gestureStyle}>
+                <RNAnimated.View
+                  style={[
+                    styles.circleOuter,
+                    { borderColor: color, transform: [{ scale: animScale }], opacity: animOpacity },
+                  ]}
+                >
+                  <RNAnimated.View style={[styles.circleInner, { backgroundColor: color + '33' }]}>
+                    <Text style={[styles.phaseLabel, { color }]}>{phaseLabels[phase]}</Text>
+                    {countdown > 0 ? <Text style={[styles.countdown, { color }]}>{countdown}</Text> : null}
+                  </RNAnimated.View>
+                </RNAnimated.View>
               </Animated.View>
-            </Animated.View>
+            </GestureDetector>
             <Text style={styles.cycleText}>
               Cycle {cycles} of {totalCycles}
             </Text>
@@ -268,31 +312,35 @@ export default function BreathingExerciseScreen() {
           </Text>
 
           <View style={styles.circlePreview}>
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => {
-                void start();
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Tap to begin"
-            >
-              <Animated.View
-                style={[
-                  styles.circleOuter,
-                  {
-                    borderColor: selectedTech.color,
-                    transform: [{ scale: animScale }],
-                    opacity: animOpacity,
-                  },
-                ]}
-              >
-                <Animated.View
-                  style={[styles.circleInner, { backgroundColor: selectedTech.color + '33' }]}
+            <GestureDetector gesture={panGesture}>
+              <Animated.View style={gestureStyle}>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    void start();
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Tap to begin - You can also drag the orb around"
                 >
-                  <Text style={[styles.phaseLabel, { color: selectedTech.color }]}>Tap to begin</Text>
-                </Animated.View>
+                  <RNAnimated.View
+                    style={[
+                      styles.circleOuter,
+                      {
+                        borderColor: selectedTech.color,
+                        transform: [{ scale: animScale }],
+                        opacity: animOpacity,
+                      },
+                    ]}
+                  >
+                    <RNAnimated.View
+                      style={[styles.circleInner, { backgroundColor: selectedTech.color + '33' }]}
+                    >
+                      <Text style={[styles.phaseLabel, { color: selectedTech.color }]}>Tap to begin</Text>
+                    </RNAnimated.View>
+                  </RNAnimated.View>
+                </TouchableOpacity>
               </Animated.View>
-            </TouchableOpacity>
+            </GestureDetector>
           </View>
 
           <TouchableOpacity
