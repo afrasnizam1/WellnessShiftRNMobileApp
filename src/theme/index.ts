@@ -28,7 +28,7 @@ export const Colors = {
   mental: '#A78BFA',
   social: '#FF5C4A',
   environment: '#3DCCF5',
-  fitness: '#FFFFFF',
+  fitness: '#389EFA',
   sleep: '#5B8CFF',
   mindfulness: '#A78BFA',
   stress: '#FA5C94',

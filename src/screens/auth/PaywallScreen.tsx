@@ -10,7 +10,13 @@ import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../
 import type { IoniconName } from '../../theme/icons';
 import { useAppStore } from '../../store';
 import { subscriptionService } from '../../services/subscriptionService';
-import { canAccessFeature, getEffectiveTier, PREMIUM_FEATURES } from '../../services/iap';
+import {
+  canAccessFeature,
+  getEffectiveTier,
+  isPurchaseCancelled,
+  PREMIUM_FEATURES,
+  STORE_UNAVAILABLE,
+} from '../../services/iap';
 import { onboardingStorage } from '../../services/onboardingStorage';
 import { pendingOnboardingStorage } from '../../services/pendingOnboardingStorage';
 import { userService } from '../../services/firebase';
@@ -169,7 +175,13 @@ export default function PaywallScreen() {
         setSubscriptionTier(result.tier);
       }
     } catch (err: any) {
-      if (err?.code !== 'E_USER_CANCELLED') {
+      if (isPurchaseCancelled(err)) return;
+      if (err?.code === STORE_UNAVAILABLE) {
+        Alert.alert(
+          'Plans unavailable',
+          "We couldn't load subscription plans from the App Store. Check your connection and try again.",
+        );
+      } else {
         Alert.alert('Purchase failed', 'Please try again or restore an existing purchase.');
       }
     } finally {

@@ -49,6 +49,8 @@ const HUD = {
 };
 
 const HOME_CATEGORIES = WELLNESS_CATEGORIES.slice(0, HUD_CATEGORY_COUNT);
+/** On the dark sphere Fitness reads best as white; the app theme keeps it blue for light screens. */
+const HUD_COLOR_OVERRIDES: Partial<Record<string, string>> = { fitness: '#FFFFFF' };
 
 function BodyHudCard({
   uid,
@@ -65,7 +67,7 @@ function BodyHudCard({
         HOME_CATEGORIES.map((cat) => ({
           key: cat.key as WellnessCategoryKey,
           label: cat.label,
-          color: cat.color,
+          color: HUD_COLOR_OVERRIDES[cat.key] ?? cat.color,
         })),
         wellnessScore?.categories,
       ),

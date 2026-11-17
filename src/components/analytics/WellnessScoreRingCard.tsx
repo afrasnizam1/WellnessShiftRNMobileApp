@@ -22,7 +22,7 @@ type Props = {
 };
 
 const BASE_RING = 162;
-const LIST_WIDTH = 148;
+const LIST_WIDTH = 168; // room for full names like "Environmental"
 
 function WellnessScoreRingCard({ wellnessScore, selectedCategory, onSelectCategory, csqScreen }: Props) {
   const focused = useIsFocused();

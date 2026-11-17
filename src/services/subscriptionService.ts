@@ -1,8 +1,9 @@
-import { Linking, Platform } from 'react-native';
+import { Alert, Linking, Platform } from 'react-native';
 import { appConfig } from '../config/appConfig';
 import {
   iapService,
   getProductId,
+  isPurchaseCancelled,
   type ActiveSubscription,
 } from './iap';
 import { subscriptionStorage } from './subscriptionStorage';
@@ -94,8 +95,13 @@ export const subscriptionService = {
           }
         },
         (error) => {
-          if (error.code !== 'E_USER_CANCELLED') {
-            console.warn('IAP error:', error.message ?? error.code);
+          if (!isPurchaseCancelled(error)) {
+            logger.log('[IAP] purchase error:', error.message ?? error.code);
+            // Store errors arrive here, not from purchase(): tell the person, don't fail silently.
+            Alert.alert(
+              'Purchase not completed',
+              'The App Store could not complete this purchase. You have not been charged. Please try again, or restore an existing purchase.',
+            );
           }
         }
       );
