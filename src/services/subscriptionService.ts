@@ -1,8 +1,9 @@
-import { Linking, Platform } from 'react-native';
+import { Alert, Linking, Platform } from 'react-native';
 import { appConfig } from '../config/appConfig';
 import {
   iapService,
   getProductId,
+  isPurchaseCancelled,
   type ActiveSubscription,
 } from './iap';
 import { subscriptionStorage } from './subscriptionStorage';
@@ -65,10 +66,14 @@ export const subscriptionService = {
         onTierChange(storedTier);
       }
 
-      const active = await iapService.syncActiveSubscription();
+      const { ok, active } = await iapService.queryActiveSubscription();
       if (active) {
         await persistTier(active.tier, active.productId);
         onTierChange(active.tier);
+      } else if (ok && storedTier && storedTier !== 'free') {
+        // Store answered and nothing is active: the subscription lapsed.
+        await persistTier('free');
+        onTierChange('free');
       }
 
       cleanupListeners?.();
@@ -90,8 +95,13 @@ export const subscriptionService = {
           }
         },
         (error) => {
-          if (error.code !== 'E_USER_CANCELLED') {
-            console.warn('IAP error:', error.message ?? error.code);
+          if (!isPurchaseCancelled(error)) {
+            logger.log('[IAP] purchase error:', error.message ?? error.code);
+            // Store errors arrive here, not from purchase(): tell the person, don't fail silently.
+            Alert.alert(
+              'Purchase not completed',
+              'The App Store could not complete this purchase. You have not been charged. Please try again, or restore an existing purchase.',
+            );
           }
         }
       );
@@ -117,7 +127,7 @@ export const subscriptionService = {
       return;
     }
 
-    const active = await iapService.syncActiveSubscription();
+    const { ok, active } = await iapService.queryActiveSubscription();
     if (active) {
       await persistTier(active.tier, active.productId, uid);
       onTierChange(active.tier);
@@ -125,10 +135,20 @@ export const subscriptionService = {
     }
 
     const stored = await subscriptionStorage.getTier();
+    if (ok) {
+      // Store answered: nothing active means free, whatever this device cached.
+      if (stored && stored !== 'free') await persistTier('free', undefined, uid);
+      onTierChange('free');
+      return;
+    }
+    // Store unreachable (offline): keep the cached tier until it can be checked.
     if (stored) {
       onTierChange(stored);
     }
   },
+
+  /** Forget this device's cached tier (sign-out), so the next account starts clean. */
+  clearCachedTier: () => subscriptionStorage.clear(),
 
   loadStoreProducts: () => iapService.loadStoreProducts(),
 

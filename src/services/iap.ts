@@ -11,6 +11,7 @@ import {
   purchaseUpdatedListener,
   purchaseErrorListener,
   finishTransaction,
+  isUserCancelledError,
   type ProductSubscription,
   type Purchase,
 } from 'react-native-iap';
@@ -27,6 +28,15 @@ export const PRODUCT_IDS = {
 } as const;
 
 export const ALL_PRODUCT_IDS = Object.values(PRODUCT_IDS);
+
+/** Thrown by subscribe() when the store has not returned the plan (products not set up, offline). */
+export const STORE_UNAVAILABLE = 'store-unavailable';
+
+/** True when the person closed the store sheet. Covers v15 ('user-cancelled') and older codes. */
+export function isPurchaseCancelled(error: unknown): boolean {
+  const code = (error as { code?: string } | null)?.code;
+  return isUserCancelledError(error) || code === 'E_USER_CANCELLED';
+}
 
 export const SUBSCRIPTION_PRODUCTS = [
   {
@@ -93,7 +103,7 @@ function productSku(product: ProductSubscription): string {
 }
 
 function productPriceLabel(product: ProductSubscription): string {
-  return product.displayPrice || product.localizedPrice || '';
+  return product.displayPrice || (product as { localizedPrice?: string | null }).localizedPrice || '';
 }
 
 function productPriceAmount(product: ProductSubscription): string {
@@ -208,6 +218,15 @@ export const iapService = {
   },
 
   subscribe: async (productId: string) => {
+    // Without the product from the store, requestPurchase fails silently on iOS —
+    // the button would appear to do nothing. Reload once, then fail loudly.
+    const hasProduct = () => storeProducts.some((p) => productSku(p) === productId);
+    if (!hasProduct()) await iapService.loadStoreProducts();
+    if (!hasProduct()) {
+      throw Object.assign(new Error('This plan is not available from the store right now.'), {
+        code: STORE_UNAVAILABLE,
+      });
+    }
     if (Platform.OS === 'android') {
       const subscriptionOffers = androidOffersForSku(productId);
       if (subscriptionOffers.length === 0) {
@@ -233,12 +252,20 @@ export const iapService = {
     });
   },
 
-  syncActiveSubscription: async (): Promise<ActiveSubscription | null> => {
+  syncActiveSubscription: async (): Promise<ActiveSubscription | null> =>
+    (await iapService.queryActiveSubscription()).active,
+
+  /**
+   * `ok: false` means the store could not be asked (offline, billing unavailable),
+   * so a cached tier may still be used. `ok: true` with `active: null` means the
+   * store answered and nothing is active — the subscription lapsed or never existed.
+   */
+  queryActiveSubscription: async (): Promise<{ ok: boolean; active: ActiveSubscription | null }> => {
     try {
       const purchases = await getAvailablePurchases({ onlyIncludeActiveItemsIOS: true });
-      return resolveHighestSubscription(purchases);
+      return { ok: true, active: resolveHighestSubscription(purchases) };
     } catch {
-      return null;
+      return { ok: false, active: null };
     }
   },
 
@@ -302,7 +329,7 @@ export function getEffectiveTier(storeTier: SubscriptionTier): SubscriptionTier 
     return appConfig.devSubscriptionTier;
   }
   // Active complimentary preview unlocks Pro features.
-  if (storeTier === 'free' && useAppStore.getState().trialActive) {
+  if (appConfig.enableComplimentaryPreview && storeTier === 'free' && useAppStore.getState().trialActive) {
     return 'pro';
   }
   return storeTier;

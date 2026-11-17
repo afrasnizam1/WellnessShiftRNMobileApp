@@ -42,6 +42,7 @@ import {
 } from '../../services/analyticsCustomizationStorage';
 import AnalyticsCustomizationModal from '../../components/analytics/AnalyticsCustomizationModal';
 import HabitsPerformanceCard from '../../components/analytics/HabitsPerformanceCard';
+import WellnessScoreRingCard from '../../components/analytics/WellnessScoreRingCard';
 import { healthKitService, getHealthPlatformName } from '../../services/healthkit';
 import { aiService, type AnalyticsAiSummary } from '../../services/ai';
 import ActivityRing from '../../components/analytics/ActivityRing';
@@ -418,41 +419,55 @@ export default function AnalyticsDashboardScreen() {
       >
         {selectionBanner}
 
-        <AnimatedPressable
-          style={[styles.card, styles.scoreHero]}
-          onPress={() => {
-            selectCategory(null);
-            setSelectedTrendIndex(-1);
-            setSelectedHealthKey(null);
-          }}
-        >
-          <View style={styles.scoreHeroLeft}>
-            <View style={[styles.scoreRing, { borderColor: scoreLabelColor(overall) }]}>
-              <Text style={styles.scoreRingNumber}>{overall.toFixed(1)}</Text>
+        {wellnessScore ? (
+          // Orbit ring + full category list (moved here from Home). Tapping a ring or row
+          // filters the charts below; tapping the centre clears the filter.
+          <WellnessScoreRingCard
+            wellnessScore={wellnessScore}
+            selectedCategory={selectedCategory}
+            onSelectCategory={(key, chart) => {
+              setSelectedTrendIndex(-1);
+              selectCategory(key, key ? { chart } : undefined);
+            }}
+            csqScreen={CSQ_SCREEN}
+          />
+        ) : (
+          <AnimatedPressable
+            style={[styles.card, styles.scoreHero]}
+            onPress={() => {
+              selectCategory(null);
+              setSelectedTrendIndex(-1);
+              setSelectedHealthKey(null);
+            }}
+          >
+            <View style={styles.scoreHeroLeft}>
+              <View style={[styles.scoreRing, { borderColor: scoreLabelColor(overall) }]}>
+                <Text style={styles.scoreRingNumber}>{overall.toFixed(1)}</Text>
+              </View>
             </View>
-          </View>
-          <View style={styles.scoreHeroRight}>
-            <Text style={styles.scoreHeroLabel}>Wellness Score · Tap charts to explore</Text>
-            <Text style={[styles.scoreHeroStatus, { color: scoreLabelColor(overall) }]}>
-              {scoreLabel(overall)}
-            </Text>
-            <Text style={styles.scoreHeroHint}>
-              Complete Today's Plan, Wellness Coach, or retake the assessment to improve.
-            </Text>
-          </View>
-          <View style={styles.scoreHeroPie}>
-            <TwoDPieChart
-              data={pieData}
-              size={100}
-              selectedIndex={selectedPieIndex}
-              onSlicePress={(index) => {
-                const key = WELLNESS_CATEGORIES[index]?.key as WellnessCategoryKey;
-                if (selectedPieIndex === index) selectCategory(null);
-                else selectCategory(key, { chart: 'Quick Pie' });
-              }}
-            />
-          </View>
-        </AnimatedPressable>
+            <View style={styles.scoreHeroRight}>
+              <Text style={styles.scoreHeroLabel}>Wellness Score · Tap charts to explore</Text>
+              <Text style={[styles.scoreHeroStatus, { color: scoreLabelColor(overall) }]}>
+                {scoreLabel(overall)}
+              </Text>
+              <Text style={styles.scoreHeroHint}>
+                Complete Today's Plan, Wellness Coach, or retake the assessment to improve.
+              </Text>
+            </View>
+            <View style={styles.scoreHeroPie}>
+              <TwoDPieChart
+                data={pieData}
+                size={100}
+                selectedIndex={selectedPieIndex}
+                onSlicePress={(index) => {
+                  const key = WELLNESS_CATEGORIES[index]?.key as WellnessCategoryKey;
+                  if (selectedPieIndex === index) selectCategory(null);
+                  else selectCategory(key, { chart: 'Quick Pie' });
+                }}
+              />
+            </View>
+          </AnimatedPressable>
+        )}
 
         <View style={styles.aiCard}>
           <View style={styles.aiHeader}>

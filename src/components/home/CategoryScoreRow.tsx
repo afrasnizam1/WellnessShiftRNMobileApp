@@ -85,7 +85,11 @@ export default memo(function CategoryScoreRow({
     transform: [{ scale: scoreScale.value }],
   }));
 
-  const label = cat.label.replace(' Health', '').replace(' Wellness', '');
+  const label = cat.label
+    .replace(' Health', '')
+    .replace(' Wellness', '')
+    .replace(' Management', '')
+    .replace(' Balance', '');
 
   return (
     <AnimatedPressable

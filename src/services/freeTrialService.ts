@@ -35,7 +35,7 @@ async function loadTrialFromFirestore(uid: string): Promise<{ start: Date; end: 
 
 export const freeTrialService = {
   async getStatus(uid: string, tier: SubscriptionTier): Promise<TrialStatus> {
-    if (tier !== 'free' || appConfig.enableDevSubscriptionBypass) {
+    if (!appConfig.enableComplimentaryPreview || tier !== 'free' || appConfig.enableDevSubscriptionBypass) {
       return { isActive: false, daysRemaining: 0, progressPercent: 100 };
     }
 

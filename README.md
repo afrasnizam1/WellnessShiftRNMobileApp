@@ -202,6 +202,7 @@ npx react-native run-ios --simulator "iPhone 17 Pro"
 | `npm run ios` | Install on iOS simulator |
 | `npm run android` | Install on Android + dismiss 16KB compat dialog |
 | `npm run bundle:hologram` | esbuild Android `viewer.js` |
+| `npm run bundle:sphere` | Rebuild the Home Body HUD sphere (`src/hologram/wellnessSphere.ts` → `wellnessSphereHtml.ts`) |
 | `npm run deploy:rules` | Firestore rules |
 | `npm run functions:deploy` | Cloud Functions |
 | `npm run deploy:backend` | Firestore + Functions |

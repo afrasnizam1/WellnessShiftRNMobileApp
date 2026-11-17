@@ -113,8 +113,16 @@ export default function ClinicianDashboardScreen() {
   const greetingName = (() => {
     const name = user?.displayName?.trim();
     if (!name) return 'there';
-    if (/^dr\.?\s/i.test(name)) return name.replace(/^dr\.?\s/i, 'Dr ');
-    return name.split(' ')[0];
+    if (/^dr\.?\s/i.test(name)) {
+      const rest = name.replace(/^dr\.?\s+/i, '');
+      const chars = [...rest];
+      if (chars.length > 0) chars[0] = chars[0].toUpperCase();
+      return `Dr ${chars.join('')}`;
+    }
+    const first = name.split(' ')[0];
+    const chars = [...first];
+    if (chars.length > 0) chars[0] = chars[0].toUpperCase();
+    return chars.join('');
   })();
 
   const QUICK_ACTIONS = [

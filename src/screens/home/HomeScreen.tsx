@@ -3,7 +3,7 @@ import { Screen } from '../../navigation/screenNames';
 import { navigationRef } from '../../navigation/navigationRef';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  RefreshControl, Platform, useWindowDimensions,
+  RefreshControl, Platform,
 } from 'react-native';
 import AppScreen from '../../components/common/AppScreen';
 import { AppCard, SectionHeader, QuickActionCard, AnimatedPressable, ListRow, IconBadge } from '../../components/ui';
@@ -11,13 +11,11 @@ import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
-import { Colors, Typography, Spacing, Radius, WELLNESS_CATEGORIES, tabBarScrollPadding } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { useAppStore } from '../../store';
 import type { WellnessCategoryKey } from '../../types';
-import WellnessOrbitRing, { getOrbitPanelSize } from '../../components/home/WellnessOrbitRing';
-import CategoryScoreRow from '../../components/home/CategoryScoreRow';
+import ScoreProgressCard from '../../components/home/ScoreProgressCard';
 import { useWellnessScoreChangeFeedback } from '../../hooks/useWellnessScoreChangeFeedback';
-import { trackChartCategoryTap } from '../../components/analytics';
 import ActivityBar from '../../components/home/ActivityBar';
 import TrialCountdownBanner from '../../components/home/TrialCountdownBanner';
 import MarketingHero from '../../components/home/MarketingHero';
@@ -48,16 +46,15 @@ import HomePurposeLeadCard from '../../components/home/HomePurposeLeadCard';
 import HomeCycleCard from '../../components/home/HomeCycleCard';
 import ClinicianRecommendationsCard from '../../components/home/ClinicianRecommendationsCard';
 import { healthKitService } from '../../services/healthkit';
+import BodyHudCard from '../../components/home/bodyHud/BodyHudCard';
 import { applyLifestyleMetricsToWellnessScore } from '../../services/lifestyleScoreService';
 import { clinicianService } from '../../services/clinicianService';
 import { gamificationService } from '../../services/gamificationService';
 import { getRouteForModuleId } from '../../utils/fitnessModuleRouter';
 import { greetingName } from '../../utils/greetingName';
 import { getOrGeneratePlan } from '../../services/planGenerator';
-import { syncUnseenCarePlan } from '../../services/carePlanUnseen';
 import {
   wellnessService,
-  carePlanService,
   planService,
   wellnessScoreService,
   userService,
@@ -69,8 +66,6 @@ import { format } from 'date-fns';
 
 const HEALTH_SYNC_MIN_MS = 60_000;
 const CSQ_SCREEN = 'Home - Dashboard';
-const WELLNESS_RING = { screen: CSQ_SCREEN, chart: 'Wellness Ring' } as const;
-const CATEGORY_LIST_ANALYTICS = { screen: CSQ_SCREEN, chart: 'Category List' } as const;
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
@@ -84,8 +79,6 @@ export default function HomeScreen() {
     setActivity,
     setDailyPlan,
     setWellnessScore,
-    setCarePlan,
-    setHasUnseenCarePlan,
     setUser,
     markTaskComplete,
     setGymVisit,
@@ -109,8 +102,6 @@ export default function HomeScreen() {
       setActivity: s.setActivity,
       setDailyPlan: s.setDailyPlan,
       setWellnessScore: s.setWellnessScore,
-      setCarePlan: s.setCarePlan,
-      setHasUnseenCarePlan: s.setHasUnseenCarePlan,
       hasUnseenCarePlan: s.hasUnseenCarePlan,
       setUser: s.setUser,
       markTaskComplete: s.markTaskComplete,
@@ -127,6 +118,19 @@ export default function HomeScreen() {
   );
 
   const [refreshing, setRefreshing] = useState(false);
+  const [hudRefreshKey, setHudRefreshKey] = useState(0);
+  // Tracks whether the Wellness Index card is in the scroll viewport, so the WebGL
+  // sphere stops rendering once it's scrolled past (state flips only on change).
+  const [hudOnScreen, setHudOnScreen] = useState(true);
+  const hudBox = useRef({ top: 0, height: 0 });
+  const hudViewport = useRef({ y: 0, height: 0 });
+  const updateHudOnScreen = useCallback(() => {
+    const { top, height } = hudBox.current;
+    const { y, height: vh } = hudViewport.current;
+    if (!height || !vh) return;
+    const visible = top < y + vh && top + height > y;
+    setHudOnScreen((prev) => (prev === visible ? prev : visible));
+  }, []);
   const [showDisclaimer, setShowDisclaimer] = useState(true);
   const [healthAvailable, setHealthAvailable] = useState(false);
   const [weeklySteps, setWeeklySteps] = useState(0);
@@ -146,32 +150,15 @@ export default function HomeScreen() {
   const healthSyncInFlight = useRef(false);
   const lastHomeInitUid = useRef<string | null>(null);
   const funnelComplete = !!user?.onboardingComplete;
-  const { width: windowWidth } = useWindowDimensions();
-  const baseRingSize = 162;
-  const basePanelSide = getOrbitPanelSize(baseRingSize);
-  const categoryListWidth = 148;
-  const ringRowNaturalWidth = basePanelSide + Spacing.sm + categoryListWidth;
-  const ringRowScale = Math.min(1, (windowWidth - 68) / ringRowNaturalWidth);
-  const ringLayoutSize = Math.round(baseRingSize * ringRowScale);
 
   const toggleCategory = useCallback((key: WellnessCategoryKey) => {
     setSelectedCategory((prev) => (prev === key ? null : key));
   }, []);
-  const clearCategory = useCallback(() => setSelectedCategory(null), []);
 
   const openVirtualTwin = useCallback(() => {
     navigation.navigate(Screen.virtualTwin);
   }, [navigation]);
 
-  const selectCategoryFromList = useCallback((key: WellnessCategoryKey) => {
-    setSelectedCategory((prev) => {
-      const next = prev === key ? null : key;
-      if (next) {
-        trackChartCategoryTap(CATEGORY_LIST_ANALYTICS, next);
-      }
-      return next;
-    });
-  }, []);
 
   const syncHealthKit = useCallback(
     async (opts?: { force?: boolean; applyLifestyle?: boolean }) => {
@@ -325,18 +312,14 @@ export default function HomeScreen() {
       }
     })();
 
-    const unsubPlans = carePlanService.watchCarePlans(user.uid, (plans) => {
-      const latest = plans[0] ?? null;
-      setCarePlan(latest);
-      syncUnseenCarePlan(user.uid, latest, setHasUnseenCarePlan).catch(() => {});
-    });
+    // Care plans are watched once for the whole patient app (CarePlanArrivalNotice),
+    // which keeps the store's carePlan / unseen flag current for this screen too.
     const unsubRecs = clinicianService.watchFitnessHubRecommendations(
       user.uid,
       setClinicianRecommendations,
     );
     return () => {
       cancelled = true;
-      unsubPlans();
       unsubRecs();
     };
     // Intentionally uid-scoped — avoid re-init on array identity churn from setUser.
@@ -430,6 +413,7 @@ export default function HomeScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    setHudRefreshKey((k) => k + 1);
     await initHome();
     setRefreshing(false);
   }, [initHome]);
@@ -543,6 +527,15 @@ export default function HomeScreen() {
         }
         showsVerticalScrollIndicator={false}
         removeClippedSubviews
+        onLayout={(e) => {
+          hudViewport.current.height = e.nativeEvent.layout.height;
+          updateHudOnScreen();
+        }}
+        onScroll={(e) => {
+          hudViewport.current.y = e.nativeEvent.contentOffset.y;
+          updateHudOnScreen();
+        }}
+        scrollEventThrottle={100}
       >
         <TrialCountdownBanner />
 
@@ -591,63 +584,34 @@ export default function HomeScreen() {
 
         <DailyMotivationQuote />
 
-        <AppCard style={styles.scoreCard} padded={false}>
-          <View style={styles.scoreCardInner}>
-          <View style={styles.scoreRingScaler}>
-            <View style={styles.scoreRow}>
-            <WellnessOrbitRing
-              score={wellnessScore?.overall ?? 0}
-              categories={wellnessScore?.categories}
-              size={ringLayoutSize}
-              spin={screenFocused}
-              selectedCategory={selectedCategory}
-              onCategorySelect={toggleCategory}
-              onCenterPress={clearCategory}
-              analytics={WELLNESS_RING}
-              scoreFeedback={scoreFeedback}
-            />
-            <View style={styles.categoryList}>
-              {WELLNESS_CATEGORIES.slice(0, 8).map((cat) => {
-                const isSelected = selectedCategory === cat.key;
-                const catScore = wellnessScore?.categories?.[cat.key as WellnessCategoryKey] ?? 0;
-                return (
-                  <CategoryScoreRow
-                    key={cat.key}
-                    cat={cat}
-                    score={catScore}
-                    isSelected={isSelected}
-                    feedback={scoreFeedback}
-                    analytics={CATEGORY_LIST_ANALYTICS}
-                    onPress={selectCategoryFromList}
-                  />
-                );
-              })}
-            </View>
-          </View>
-          </View>
+        <View
+          onLayout={(e) => {
+            hudBox.current = { top: e.nativeEvent.layout.y, height: e.nativeEvent.layout.height };
+            updateHudOnScreen();
+          }}
+        >
+          <BodyHudCard
+            uid={user?.uid}
+            wellnessScore={wellnessScore}
+            selectedCategory={selectedCategory}
+            onSelectCategory={toggleCategory}
+            streakDays={checkInStreak}
+            // The 3D sphere only renders while Home is focused AND the card is on screen.
+            focused={screenFocused && hudOnScreen}
+            refreshKey={hudRefreshKey}
+            csqScreen={CSQ_SCREEN}
+          />
+        </View>
 
-          {wellnessScore && (
-            <AnimatedPressable
-              style={styles.analyticsLink}
-              onPress={() => navigation.navigate(Screen.tabAnalytics)}
-            >
-              <Text style={styles.analyticsLinkText}>View full analytics</Text>
-              <Ionicons name="chevron-forward" size={14} color={Colors.primary} />
-            </AnimatedPressable>
-          )}
-
-          {!wellnessScore && (
-            <AnimatedPressable
-              style={styles.quizCTA}
-              onPress={openWellnessQuiz}
-            >
-              <Ionicons name="clipboard-outline" size={18} color={Colors.primary} />
-              <Text style={styles.quizCTAText}>Take wellness assessment to get your score</Text>
-              <Ionicons name="arrow-forward" size={16} color={Colors.primary} />
-            </AnimatedPressable>
-          )}
-          </View>
-        </AppCard>
+        {/* Wellness Index above shows today's score; this card shows what's changed. */}
+        <ScoreProgressCard
+          uid={user?.uid}
+          wellnessScore={wellnessScore}
+          refreshKey={hudRefreshKey}
+          onOpenAnalytics={() => navigation.navigate(Screen.tabAnalytics)}
+          onTakeAssessment={openWellnessQuiz}
+          csqScreen={CSQ_SCREEN}
+        />
 
         {showRefinePrompt ? (
           <RefineWellnessCard
@@ -915,18 +879,18 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(52, 199, 89, 0.25)',
   },
   celebrationText: { fontSize: Typography.size.sm, color: Colors.success, fontWeight: '700', textAlign: 'center' },
-  greetingRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.sm },
+  greetingRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingVertical: 2 },
   avatarCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarLetter: { color: Colors.white, fontSize: Typography.size.lg, fontWeight: '800' },
+  avatarLetter: { color: Colors.white, fontSize: Typography.size.sm, fontWeight: '800' },
   greetingText: { flex: 1 },
-  greetingLine: { fontSize: Typography.size.sm, color: Colors.textSecondary, fontWeight: '500' },
-  greetingName: { fontSize: Typography.size.xl, fontWeight: '800', color: Colors.text, letterSpacing: -0.5 },
+  greetingLine: { fontSize: Typography.size.xs, color: Colors.textSecondary, fontWeight: '500' },
+  greetingName: { fontSize: Typography.size.md, fontWeight: '800', color: Colors.text, letterSpacing: -0.4 },
   datePill: {
     backgroundColor: Colors.surface,
     paddingHorizontal: Spacing.sm,
@@ -936,44 +900,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderLight,
   },
   dateText: { fontSize: Typography.size.xs, color: Colors.textSecondary, fontWeight: '600' },
-  scoreCard: { overflow: 'visible' },
-  scoreCardInner: {
-    paddingTop: Spacing.xs,
-    paddingBottom: Spacing.sm,
-    paddingRight: Spacing.lg,
-    paddingLeft: Spacing.sm,
-    overflow: 'visible',
-  },
-  scoreRingScaler: {
-    overflow: 'visible',
-    alignSelf: 'flex-start',
-    width: '100%',
-  },
-  scoreRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  categoryList: { flex: 1, gap: 2, minWidth: 0 },
-  analyticsLink: {
-    marginTop: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingVertical: Spacing.xs,
-  },
-  analyticsLinkText: { fontSize: Typography.size.sm, color: Colors.primary, fontWeight: '600' },
-  quizCTA: {
-    marginTop: Spacing.md,
-    backgroundColor: Colors.primaryLight,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  quizCTAText: { flex: 1, fontSize: Typography.size.sm, color: Colors.primary, fontWeight: '600' },
   planEmptyCTA: {
     flexDirection: 'row',
     alignItems: 'center',

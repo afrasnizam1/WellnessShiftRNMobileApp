@@ -12,11 +12,7 @@ import { isDeeperCheckInComplete } from '../../utils/wellnessAssessmentScoring';
 import { ANATOMY_MODELS } from '../../data/anatomyModels';
 import { Screen } from '../../navigation/screenNames';
 import { navigationRef } from '../../navigation/navigationRef';
-
-function greetingName(user: { displayName?: string } | null) {
-  const raw = user?.displayName || 'there';
-  return raw.split(' ')[0];
-}
+import { greetingName } from '../../utils/greetingName';
 
 function ScaleBar({ progress, colors }: { progress: number; colors: string[] }) {
   const clamped = Math.max(0.04, Math.min(1, progress));

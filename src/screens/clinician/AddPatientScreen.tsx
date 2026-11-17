@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.text,
   },
-  body: { padding: Spacing.base, gap: Spacing.md, paddingBottom: Spacing.xxl },
+  body: { padding: Spacing.base, gap: Spacing.md, paddingBottom: Spacing['2xl'] },
   hint: { fontSize: Typography.size.sm, color: Colors.textSecondary, lineHeight: 20 },
   panel: {
     backgroundColor: Colors.white,

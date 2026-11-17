@@ -42,6 +42,13 @@ export const appConfig = {
    * Must stay false for App Store / production builds.
    */
   enableDevSubscriptionBypass: false,
+
+  /**
+   * In-app "complimentary preview" that unlocks Pro for 14 days without a purchase.
+   * Off for store builds: Apple expects subscription trials to be App Store
+   * introductory offers (configured in App Store Connect / Play Console) instead.
+   */
+  enableComplimentaryPreview: false,
   devSubscriptionTier: 'growth' as 'free' | 'growth' | 'pro',
 
   websiteUrl: 'https://wellnesshift.co.uk',

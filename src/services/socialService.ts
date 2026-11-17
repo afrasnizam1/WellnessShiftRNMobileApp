@@ -207,7 +207,14 @@ export const socialService = {
     return snap.docs.map((d) => serialiseChallenge(d));
   },
 
-  createChallenge: async (uid: string, title: string, description: string, category: string, durationDays: number): Promise<SocialChallenge> => {
+  createChallenge: async (
+    uid: string,
+    title: string,
+    description: string,
+    category: string,
+    durationDays: number,
+    target?: { targetValue?: number; targetUnit?: string },
+  ): Promise<SocialChallenge> => {
     if (!appConfig.isFirebaseConfigured) {
       const now = new Date().toISOString();
       const ends = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
@@ -216,7 +223,17 @@ export const socialService = {
     const now = new Date().toISOString();
     const endsAt = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
     const ref = firestore().collection('challenges').doc();
-    const payload = { title, description, category, durationDays, createdBy: uid, createdAt: now, endsAt };
+    const payload = {
+      title,
+      description,
+      category,
+      durationDays,
+      createdBy: uid,
+      createdAt: now,
+      endsAt,
+      ...(target?.targetValue != null ? { targetValue: target.targetValue } : {}),
+      ...(target?.targetUnit ? { targetUnit: target.targetUnit } : {}),
+    };
     await ref.set(payload);
     return { id: ref.id, ...payload };
   },
@@ -225,6 +242,11 @@ export const socialService = {
     if (!appConfig.isFirebaseConfigured) return;
     const ref = firestore().collection('challenges').doc(challengeId).collection('participants').doc(uid);
     await ref.set({ userId: uid, displayName, progress: 0, goal, updatedAt: new Date().toISOString() }, { merge: true });
+  },
+
+  leaveChallenge: async (challengeId: string, uid: string): Promise<void> => {
+    if (!appConfig.isFirebaseConfigured) return;
+    await firestore().collection('challenges').doc(challengeId).collection('participants').doc(uid).delete();
   },
 
   fetchChallengeParticipants: async (challengeId: string): Promise<ChallengeParticipant[]> => {

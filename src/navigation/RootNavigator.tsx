@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AppLoadingScreen from '../components/auth/AppLoadingScreen';
+import ProfileLoadErrorScreen from '../components/auth/ProfileLoadErrorScreen';
 
 import { appConfig } from '../config/appConfig';
 import { useShallow } from 'zustand/react/shallow';
@@ -25,6 +26,7 @@ import {
   type PreAuthRoute,
 } from '../services/onboardingRoutes';
 import {
+  pendingBelongsTo,
   pendingCanShowResults,
   pendingJustFinishedQuiz,
   pendingOnboardingStorage,
@@ -160,9 +162,15 @@ async function ensureProfile(firebaseUser: { uid: string; email: string | null; 
   if (!profile) return null;
 
   if (profile.role === 'patient') {
-    const applied = await applyPendingOnboardingToAccount(firebaseUser.uid);
-    if (applied) {
-      profile = (await userService.getProfile(firebaseUser.uid)) ?? profile;
+    if (profile.onboardingComplete) {
+      // Already onboarded: anything left in the device-wide onboarding store
+      // (guest taps, another account's quiz) must not be written into this account.
+      await pendingOnboardingStorage.clear().catch(() => {});
+    } else {
+      const applied = await applyPendingOnboardingToAccount(firebaseUser.uid);
+      if (applied) {
+        profile = (await userService.getProfile(firebaseUser.uid)) ?? profile;
+      }
     }
   }
 
@@ -235,7 +243,11 @@ async function resolvePatientOnboardingRouteFromProfile(
     }
   }
 
-  const pending = await pendingOnboardingStorage.get();
+  const storedPending = await pendingOnboardingStorage.get();
+  // Ignore progress another account left on this device.
+  const pending = pendingBelongsTo(storedPending, current.uid)
+    ? storedPending
+    : await pendingOnboardingStorage.clear().then(() => pendingOnboardingStorage.get());
   let score = await wellnessService.getLatestScore(current.uid);
   // Guest quiz → account: score may still only live in pending until apply runs.
   if (!score && pending.wellnessScore && pending.quizComplete) {
@@ -303,6 +315,9 @@ export default function RootNavigator() {
   const freezePreAuthRouteRef = useRef(false);
   const guestNavActiveRef = useRef(false);
   const lastCsqScreenviewRef = useRef<string | null>(null);
+  /** Signed in with Firebase, but the profile could not be loaded. */
+  const [profileLoadFailed, setProfileLoadFailed] = useState(false);
+  const retryProfileLoadRef = useRef<(() => Promise<void>) | null>(null);
 
   useEffect(() => {
     return registerPreAuthRouteListener((route) => {
@@ -455,7 +470,22 @@ export default function RootNavigator() {
           if (firebaseUser) {
             const acceptSession = async () => {
               const profile = await ensureProfile(firebaseUser);
-              if (!profile || cancelled) return;
+              if (cancelled) return;
+              if (!profile) {
+                // Don't drop a signed-in person onto the guest intro — offer a retry.
+                retryProfileLoadRef.current = async () => {
+                  setProfileLoadFailed(false);
+                  setAuthLoading(true);
+                  try {
+                    await acceptSession();
+                  } finally {
+                    setAuthLoading(false);
+                  }
+                };
+                setProfileLoadFailed(true);
+                return;
+              }
+              setProfileLoadFailed(false);
 
               clearDeferredSimulatorSession();
               setUser(profile);
@@ -502,9 +532,11 @@ export default function RootNavigator() {
             // Always resume a persisted Firebase session on launch (device + simulator).
             await acceptSession();
           } else if (isDemoProfile(useAppStore.getState().user)) {
+            setProfileLoadFailed(false);
             setAuthLoading(false);
           } else {
             clearDeferredSimulatorSession();
+            setProfileLoadFailed(false);
             const hadFirebaseSession = lastAuthUidRef.current != null;
             if (hadFirebaseSession) {
               freezePreAuthRouteRef.current = false;
@@ -667,6 +699,20 @@ export default function RootNavigator() {
     user.onboardingComplete &&
     !showEmailVerification &&
     launchWelcomeGate === 'done';
+
+  if (profileLoadFailed && !user && !isAuthLoading) {
+    return (
+      <ProfileLoadErrorScreen
+        onRetry={async () => {
+          await retryProfileLoadRef.current?.();
+        }}
+        onSignOut={async () => {
+          setProfileLoadFailed(false);
+          await signOutCurrentUser();
+        }}
+      />
+    );
+  }
 
   if (
     (isAuthLoading && !guestNavActiveRef.current) ||

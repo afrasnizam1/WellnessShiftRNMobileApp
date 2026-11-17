@@ -1,14 +1,15 @@
 // src/screens/more/SubscriptionScreen.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Linking,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { Colors, Typography, Spacing, Radius, Shadow, tabBarScrollPadding } from '../../theme';
 import { useAppStore } from '../../store';
 import { subscriptionService } from '../../services/subscriptionService';
-import { getEffectiveTier } from '../../services/iap';
+import { getEffectiveTier, isPurchaseCancelled, STORE_UNAVAILABLE } from '../../services/iap';
+import { appConfig } from '../../config/appConfig';
 import type { SubscriptionTier } from '../../types';
 import AppScreen from '../../components/common/AppScreen';
 
@@ -80,7 +81,13 @@ export default function SubscriptionScreen() {
         Alert.alert('Subscribed!', `You're now on the ${result.tier} plan.`);
       }
     } catch (err: any) {
-      if (err?.code !== 'E_USER_CANCELLED') {
+      if (isPurchaseCancelled(err)) return;
+      if (err?.code === STORE_UNAVAILABLE) {
+        Alert.alert(
+          'Plans unavailable',
+          "We couldn't load subscription plans from the App Store. Check your connection and try again.",
+        );
+      } else {
         Alert.alert('Purchase failed', 'Please try again or contact support.');
       }
     } finally {
@@ -232,6 +239,24 @@ export default function SubscriptionScreen() {
           <Text style={styles.restoreBtnText}>Restore Purchases</Text>
         </TouchableOpacity>
 
+        {/* Apple 3.1.2: auto-renewing plans need Terms of Use and Privacy links beside the purchase. */}
+        <View style={styles.legalLinks}>
+          <TouchableOpacity
+            onPress={() => Linking.openURL(appConfig.termsOfServiceUrl)}
+            accessibilityRole="link"
+            accessibilityLabel="Terms of Use"
+          >
+            <Text style={styles.legalLink}>Terms of Use</Text>
+          </TouchableOpacity>
+          <Text style={styles.legalDot}>·</Text>
+          <TouchableOpacity
+            onPress={() => Linking.openURL(appConfig.privacyPolicyUrl)}
+            accessibilityRole="link"
+            accessibilityLabel="Privacy Policy"
+          >
+            <Text style={styles.legalLink}>Privacy Policy</Text>
+          </TouchableOpacity>
+        </View>
         <Text style={styles.legalText}>{subscriptionService.billingLegalText}</Text>
         <View style={{ height: Spacing.xl }} />
       </ScrollView>
@@ -322,6 +347,9 @@ const styles = StyleSheet.create({
 
   restoreBtn: { alignItems: 'center', paddingVertical: Spacing.md },
   restoreBtnText: { color: Colors.primary, fontSize: Typography.size.sm, fontWeight: '600' },
+  legalLinks: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: Spacing.sm },
+  legalLink: { fontSize: Typography.size.xs, color: Colors.primary, fontWeight: '600' },
+  legalDot: { fontSize: Typography.size.xs, color: Colors.textTertiary },
   legalText: {
     fontSize: Typography.size.xs, color: Colors.textTertiary,
     textAlign: 'center', lineHeight: 16,

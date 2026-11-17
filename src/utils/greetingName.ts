@@ -16,7 +16,15 @@ export function isPlaceholderName(name?: string | null): boolean {
 function emailLocalPart(email?: string | null): string | null {
   const local = email?.split('@')[0]?.trim();
   if (!local) return null;
-  return local.charAt(0).toUpperCase() + local.slice(1);
+  return capitalizeFirst(local);
+}
+
+/** First character uppercased, rest unchanged. */
+function capitalizeFirst(value: string): string {
+  const chars = [...value];
+  if (chars.length === 0) return value;
+  chars[0] = chars[0].toUpperCase();
+  return chars.join('');
 }
 
 /**
@@ -31,7 +39,7 @@ export function resolveDisplayName(
   const candidates = [user?.displayName, user?.name];
   for (const c of candidates) {
     const raw = c?.trim() ?? '';
-    if (raw && !isPlaceholderName(raw)) return raw;
+    if (raw && !isPlaceholderName(raw)) return capitalizeFirst(raw);
   }
   return emailLocalPart(user?.email) ?? fallback;
 }
@@ -45,7 +53,7 @@ export function greetingName(
 ): string {
   const full = resolveDisplayName(user, 'there');
   if (full === 'there') return full;
-  return full.split(/\s+/)[0];
+  return capitalizeFirst(full.split(/\s+/)[0]);
 }
 
 /** Initials for avatars from a resolved display name. */

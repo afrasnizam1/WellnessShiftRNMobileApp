@@ -1,7 +1,10 @@
-import type { Purchase } from 'react-native-iap';
+import { fetchProducts, requestPurchase, type Purchase } from 'react-native-iap';
 import {
   PRODUCT_IDS,
+  STORE_UNAVAILABLE,
   getTierFromProductId,
+  iapService,
+  isPurchaseCancelled,
   resolveHighestSubscription,
 } from './iap';
 
@@ -14,6 +17,7 @@ jest.mock('react-native-iap', () => ({
   purchaseUpdatedListener: jest.fn(),
   purchaseErrorListener: jest.fn(),
   finishTransaction: jest.fn(),
+  isUserCancelledError: (e: { code?: string } | null) => e?.code === 'user-cancelled',
 }));
 
 jest.mock('../store', () => ({
@@ -53,5 +57,33 @@ describe('resolveHighestSubscription', () => {
 
   it('returns null when there are no paid products', () => {
     expect(resolveHighestSubscription([])).toBeNull();
+  });
+});
+
+describe('isPurchaseCancelled', () => {
+  it('recognises the v15 code and the older one', () => {
+    expect(isPurchaseCancelled({ code: 'user-cancelled' })).toBe(true);
+    expect(isPurchaseCancelled({ code: 'E_USER_CANCELLED' })).toBe(true);
+    expect(isPurchaseCancelled({ code: 'network-error' })).toBe(false);
+    expect(isPurchaseCancelled(null)).toBe(false);
+  });
+});
+
+describe('iapService.subscribe', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('fails loudly instead of silently when the store has not returned the plan', async () => {
+    (fetchProducts as jest.Mock).mockResolvedValue([]);
+    await expect(iapService.subscribe(PRODUCT_IDS.proYearly)).rejects.toMatchObject({
+      code: STORE_UNAVAILABLE,
+    });
+    expect(fetchProducts).toHaveBeenCalledTimes(1);
+    expect(requestPurchase).not.toHaveBeenCalled();
+  });
+
+  it('starts the purchase when the plan is available', async () => {
+    (fetchProducts as jest.Mock).mockResolvedValue([{ id: PRODUCT_IDS.proYearly }]);
+    await iapService.subscribe(PRODUCT_IDS.proYearly);
+    expect(requestPurchase).toHaveBeenCalledTimes(1);
   });
 });

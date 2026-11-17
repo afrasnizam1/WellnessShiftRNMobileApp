@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import firestore, { FirebaseFirestoreTypes } from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
+import { Platform } from 'react-native';
 import { FS } from './firestoreSchema';
 import { isFirebaseReady } from './firebaseReady';
 import { signOutCurrentUser } from './authSession';
@@ -158,6 +159,54 @@ async function clearLocalUserData(uid: string): Promise<void> {
   }
 }
 
+const RECENT_SIGN_IN_MS = 5 * 60 * 1000;
+
+const SIGN_IN_AGAIN_MESSAGE =
+  'For your security, please sign out, sign back in, then delete your account. Nothing has been deleted.';
+
+/**
+ * Makes sure Firebase will accept `currentUser.delete()` before any data is removed.
+ * Sign in with Apple users re-confirm with Apple (which also yields the authorization
+ * code needed to revoke their token). Others must have signed in within 5 minutes.
+ * Returns the Apple authorization code to revoke, if any.
+ */
+async function confirmRecentSignIn(
+  currentUser: any,
+): Promise<string | null> {
+  const providers: string[] = (currentUser.providerData ?? []).map(
+    (p: { providerId: string }) => p.providerId,
+  );
+
+  if (Platform.OS === 'ios' && providers.includes('apple.com')) {
+    const { appleAuth } = await import('@invertase/react-native-apple-authentication');
+    let response;
+    try {
+      response = await appleAuth.performRequest({
+        requestedOperation: appleAuth.Operation.LOGIN,
+        requestedScopes: [],
+      });
+    } catch (error: any) {
+      if (String(error?.code) === '1001') {
+        throw new Error('Account deletion was cancelled. Nothing has been deleted.');
+      }
+      throw new Error('Could not confirm your Apple ID. Nothing has been deleted.');
+    }
+    if (!response.identityToken) {
+      throw new Error('Could not confirm your Apple ID. Nothing has been deleted.');
+    }
+    await currentUser.reauthenticateWithCredential(
+      auth.AppleAuthProvider.credential(response.identityToken, response.nonce),
+    );
+    return response.authorizationCode ?? null;
+  }
+
+  const last = Date.parse(currentUser.metadata?.lastSignInTime ?? '');
+  if (!Number.isFinite(last) || Date.now() - last > RECENT_SIGN_IN_MS) {
+    throw new Error(SIGN_IN_AGAIN_MESSAGE);
+  }
+  return null;
+}
+
 /**
  * Permanently deletes the signed-in user's Firestore data, local cache, then Auth account.
  * Clears local session afterwards. Throws with a friendly message if re-auth is required.
@@ -174,6 +223,10 @@ export async function deleteCurrentUserAccount(): Promise<void> {
 
   const uid = currentUser.uid;
 
+  // Confirm a fresh sign-in BEFORE deleting anything, so a "please sign in again"
+  // failure can never leave the account alive with its data already wiped.
+  const appleAuthorizationCode = await confirmRecentSignIn(currentUser);
+
   await deleteMessageThreadsForUser(uid);
   await deleteCarePlansAndNotifications(uid);
   await unlinkClinicianRelationships(uid);
@@ -181,13 +234,19 @@ export async function deleteCurrentUserAccount(): Promise<void> {
   await deleteTopLevelUserDocs(uid);
   await clearLocalUserData(uid);
 
+  // Apple requires apps that offer Sign in with Apple to revoke the user's
+  // token when the account is deleted.
+  if (appleAuthorizationCode) {
+    await auth()
+      .revokeToken(appleAuthorizationCode)
+      .catch((error: unknown) => console.warn('[accountDeletion] Apple token revoke failed:', error));
+  }
+
   try {
     await currentUser.delete();
   } catch (error: any) {
     if (error?.code === 'auth/requires-recent-login') {
-      throw new Error(
-        'For security, please sign out, sign back in, then try deleting your account again.',
-      );
+      throw new Error(SIGN_IN_AGAIN_MESSAGE.replace(' Nothing has been deleted.', ''));
     }
     throw error instanceof Error
       ? error

@@ -93,7 +93,13 @@ export default function SocialFeedScreen() {
   const joinChallenge = async (challengeId: string) => {
     if (!user) return;
     try {
-      await socialService.joinChallenge(challengeId, user.uid, user.displayName);
+      const challenge = challenges.find((c) => c.id === challengeId);
+      await socialService.joinChallenge(
+        user.uid,
+        user.displayName || 'Member',
+        challengeId,
+        challenge?.targetValue ?? challenge?.durationDays ?? 1,
+      );
       loadFeed();
     } catch (e) {
       console.warn('Failed to join challenge:', e);

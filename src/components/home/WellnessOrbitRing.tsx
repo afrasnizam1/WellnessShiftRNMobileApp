@@ -216,11 +216,13 @@ export default memo(function WellnessOrbitRing({
     }
   };
 
-  const disc = layout.centerDisc;
-  const scoreFontSize = selectedCategory ? disc * 0.3 : disc * 0.36;
-  const labelFontSize = Math.max(8, disc * 0.15);
-  const subLabelFontSize = Math.max(7, disc * 0.12);
-  const centerTextWidth = disc * 0.88;
+  // Stay inside the innermost ring, including the thicker stroke used when a segment is selected.
+  const innerEdge = layout.minDiameter / 2 - layout.lineWidth / 2 - 3;
+  const disc = Math.max(28, Math.min(layout.centerDisc, innerEdge * 2));
+  const scoreFontSize = selectedCategory ? disc * 0.26 : disc * 0.32;
+  const labelFontSize = Math.max(7, disc * (selectedCategory ? 0.13 : 0.15));
+  const subLabelFontSize = Math.max(6, disc * 0.1);
+  const centerTextWidth = disc * 0.78;
 
   return (
     <View
@@ -343,20 +345,23 @@ export default memo(function WellnessOrbitRing({
           const ringDiameter = layout.maxDiameter - index * layout.sizeStep;
           const radius = ringDiameter / 2;
           const catScore = categories?.[cat.key as WellnessCategoryKey] ?? 0;
-          const circumference = 2 * Math.PI * radius;
-          const progress = Math.min(catScore / 10, 1) * circumference;
-          const gap = circumference - progress;
           const isSelected = selectedCategory === cat.key;
           const isDimmed = selectedCategory != null && !isSelected;
           const isOutermost = index === 0;
-          const strokeWidth = layout.lineWidth + (isSelected ? (isOutermost ? 2 : 6) : 0);
+          const strokeExtra = isSelected ? (isOutermost ? 1.5 : 2.5) : 0;
+          // Extra thickness grows outward so a selected ring never covers the center label.
+          const drawRadius = radius + strokeExtra / 2;
+          const strokeWidth = layout.lineWidth + strokeExtra;
+          const circumference = 2 * Math.PI * drawRadius;
+          const progress = Math.min(catScore / 10, 1) * circumference;
+          const gap = circumference - progress;
           const isFeedbackRing =
             scoreFeedback != null &&
             (scoreFeedback.category === cat.key ||
               (scoreFeedback.category === 'overall' && isSelected));
           const ringBoost = isFeedbackRing && scoreFeedback?.direction === 'up' ? 0.08 : 0;
           const ringDim = isFeedbackRing && scoreFeedback?.direction === 'down' ? 0.12 : 0;
-          const ringScale = (isSelected ? (isOutermost ? 1.02 : 1.06) : 1) + ringBoost;
+          const ringScale = 1 + ringBoost;
 
           return (
             <G
@@ -377,7 +382,7 @@ export default memo(function WellnessOrbitRing({
               <Circle
                 cx={cx}
                 cy={cy}
-                r={radius}
+                r={drawRadius}
                 stroke={cat.color}
                 strokeWidth={strokeWidth}
                 strokeOpacity={isDimmed ? 0.65 : Math.max(0.45, 0.92 - ringDim)}
@@ -421,9 +426,9 @@ export default memo(function WellnessOrbitRing({
           style={[
             styles.centerGlow,
             {
-              width: layout.centerDisc * 1.35,
-              height: layout.centerDisc * 1.35,
-              borderRadius: layout.centerDisc * 0.675,
+              width: disc * 1.08,
+              height: disc * 1.08,
+              borderRadius: disc * 0.54,
               backgroundColor:
                 scoreFeedback?.direction === 'down'
                   ? 'rgba(120, 130, 150, 0.22)'
@@ -436,61 +441,86 @@ export default memo(function WellnessOrbitRing({
         <Animated.View style={[styles.centerContent, centerWrapStyle]}>
           <View
             style={[
-              styles.centerDisc,
+              styles.centerClip,
               {
-                width: layout.centerDisc,
-                height: layout.centerDisc,
-                borderRadius: layout.centerDisc / 2,
+                width: disc,
+                height: disc,
+                borderRadius: disc / 2,
               },
             ]}
-          />
-          <View style={[styles.centerText, { maxWidth: centerTextWidth }]}>
-            {selectedCategory && selectedMeta ? (
-              <>
-                <Text
-                  style={[
-                    styles.scoreNumber,
-                    {
-                      fontSize: scoreFontSize,
-                      lineHeight: scoreFontSize * 1.05,
-                      color: selectedMeta.color,
-                    },
-                    feedbackAppliesToCenter &&
-                      scoreFeedback?.direction === 'up' && styles.scoreNumberUp,
-                    feedbackAppliesToCenter &&
-                      scoreFeedback?.direction === 'down' && styles.scoreNumberDown,
-                  ]}
-                >
-                  {selectedScore.toFixed(1)}
-                </Text>
-                <Text
-                  style={[
-                    styles.categoryName,
-                    { fontSize: labelFontSize, lineHeight: labelFontSize * 1.15, color: selectedMeta.color },
-                  ]}
-                  numberOfLines={2}
-                >
-                  {shortCategoryLabel(selectedMeta.label)}
-                </Text>
-                <Text style={[styles.scoreSubLabel, { fontSize: subLabelFontSize }]}>out of 10</Text>
-              </>
-            ) : (
-              <>
-                <Text
-                  style={[
-                    styles.scoreNumber,
-                    { fontSize: scoreFontSize, lineHeight: scoreFontSize * 1.05 },
-                    feedbackAppliesToCenter &&
-                      scoreFeedback?.direction === 'up' && styles.scoreNumberUp,
-                    feedbackAppliesToCenter &&
-                      scoreFeedback?.direction === 'down' && styles.scoreNumberDown,
-                  ]}
-                >
-                  {score.toFixed(1)}
-                </Text>
-                <Text style={[styles.scoreLabel, { fontSize: labelFontSize }]}>Wellness</Text>
-              </>
-            )}
+          >
+            <View style={styles.centerDisc} />
+            <View style={[styles.centerText, { maxWidth: centerTextWidth }]}>
+              {selectedCategory && selectedMeta ? (
+                <>
+                  <Text
+                    allowFontScaling={false}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.7}
+                    style={[
+                      styles.scoreNumber,
+                      {
+                        fontSize: scoreFontSize,
+                        lineHeight: scoreFontSize * 1.02,
+                        color: selectedMeta.color,
+                      },
+                      feedbackAppliesToCenter &&
+                        scoreFeedback?.direction === 'up' && styles.scoreNumberUp,
+                      feedbackAppliesToCenter &&
+                        scoreFeedback?.direction === 'down' && styles.scoreNumberDown,
+                    ]}
+                  >
+                    {selectedScore.toFixed(1)}
+                  </Text>
+                  <Text
+                    allowFontScaling={false}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.65}
+                    style={[
+                      styles.categoryName,
+                      { fontSize: labelFontSize, lineHeight: labelFontSize * 1.1, color: selectedMeta.color },
+                    ]}
+                  >
+                    {shortCategoryLabel(selectedMeta.label)}
+                  </Text>
+                  <Text
+                    allowFontScaling={false}
+                    numberOfLines={1}
+                    style={[styles.scoreSubLabel, { fontSize: subLabelFontSize, lineHeight: subLabelFontSize * 1.1 }]}
+                  >
+                    out of 10
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text
+                    allowFontScaling={false}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.7}
+                    style={[
+                      styles.scoreNumber,
+                      { fontSize: scoreFontSize, lineHeight: scoreFontSize * 1.02 },
+                      feedbackAppliesToCenter &&
+                        scoreFeedback?.direction === 'up' && styles.scoreNumberUp,
+                      feedbackAppliesToCenter &&
+                        scoreFeedback?.direction === 'down' && styles.scoreNumberDown,
+                    ]}
+                  >
+                    {score.toFixed(1)}
+                  </Text>
+                  <Text
+                    allowFontScaling={false}
+                    numberOfLines={1}
+                    style={[styles.scoreLabel, { fontSize: labelFontSize, lineHeight: labelFontSize * 1.1 }]}
+                  >
+                    Wellness
+                  </Text>
+                </>
+              )}
+            </View>
           </View>
         </Animated.View>
 
@@ -544,14 +574,15 @@ const styles = StyleSheet.create({
   centerGlow: {
     position: 'absolute',
   },
-  centerDisc: {
-    position: 'absolute',
+  centerClip: {
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.95)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+  },
+  centerDisc: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.95)',
   },
   centerText: {
     alignItems: 'center',
@@ -612,7 +643,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   sparkleWrap: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },
