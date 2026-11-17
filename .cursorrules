@@ -1,0 +1,192 @@
+# WellnessShift Cursor Rules
+
+## Project Context
+This is WellnessShift - a React Native wellness application for patients and clinicians with Firebase backend.
+
+## Tech Stack
+- React Native 0.86 with React 19
+- TypeScript 5.0.4
+- React Navigation v6
+- Zustand for state management
+- Firebase (Auth, Firestore, Functions, Messaging, Crashlytics)
+- Expo 57 for cross-platform APIs
+
+## Code Style & Conventions
+
+### TypeScript
+- Always use TypeScript for new code
+- Prefer interfaces over types for object shapes
+- Use explicit return types for exported functions
+- Avoid `any` - use proper typing or `unknown`
+- Use strict null checks
+
+### React Native Components
+- Use functional components with hooks only
+- Prefer named exports over default exports
+- Keep components focused and under 300 lines
+- Extract complex logic into custom hooks
+- Use React.memo for expensive components
+
+### File Naming
+- Components: PascalCase (`WellnessScore.tsx`)
+- Utilities/hooks: camelCase (`useWellnessScore.ts`)
+- Constants: SCREAMING_SNAKE_CASE in files
+- Keep related files together in feature folders
+
+### Imports Order
+1. React/React Native imports
+2. Third-party libraries
+3. Navigation
+4. Components
+5. Services/utilities
+6. Types
+7. Styles
+
+### Styling
+- Use the theme system from `src/theme/`
+- Keep styles at bottom of file with `StyleSheet.create()`
+- Use theme colors, spacing, and typography constants
+- Consider responsive design for different screen sizes
+- Test on both iOS and Android
+
+### State Management
+- Use Zustand stores in `src/store/`
+- Keep store logic separate from components
+- Use selectors to prevent unnecessary re-renders
+- Persist important state with MMKV
+
+### Firebase
+- Always check auth state before Firestore operations
+- Use proper security rules (see firestore.rules)
+- Handle offline scenarios gracefully
+- Use batch operations for multiple writes
+- Implement proper error handling
+
+### Navigation
+- Use typed navigation with TypeScript
+- Keep navigation logic in `src/navigation/`
+- Use proper screen options for headers
+- Handle deep linking appropriately
+
+## Common Patterns
+
+### API Calls
+```typescript
+try {
+  const result = await someAsyncOperation();
+  return result;
+} catch (error) {
+  console.error('Operation failed:', error);
+  // Show user-friendly error
+  throw error;
+}
+```
+
+### Component Structure
+```typescript
+interface Props {
+  // Props interface
+}
+
+export const ComponentName: React.FC<Props> = ({ prop1, prop2 }) => {
+  // Hooks first
+  const [state, setState] = useState();
+  const navigation = useNavigation();
+  
+  // Effects
+  useEffect(() => {
+    // Effect logic
+  }, [dependencies]);
+  
+  // Handlers
+  const handleAction = () => {
+    // Handler logic
+  };
+  
+  // Render
+  return (
+    <View>
+      {/* Component JSX */}
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  // Styles
+});
+```
+
+### Firestore Operations
+```typescript
+import firestore from '@react-native-firebase/firestore';
+
+// Read
+const doc = await firestore()
+  .collection('users')
+  .doc(userId)
+  .get();
+
+// Write
+await firestore()
+  .collection('users')
+  .doc(userId)
+  .set(data, { merge: true });
+```
+
+## Project Structure
+
+- `src/screens/` - Screen components organized by feature
+- `src/components/` - Reusable UI components
+- `src/navigation/` - Navigation configuration
+- `src/services/` - Business logic (Firebase, health, IAP, etc.)
+- `src/store/` - Zustand state stores
+- `src/theme/` - Design tokens (colors, spacing, typography)
+- `src/config/` - App configuration
+- `src/hologram/` - 3D hologram viewer (Android)
+
+## Testing
+- Test critical flows (auth, wellness score, care plans)
+- Mock Firebase and external services
+- Test on both iOS and Android
+- Handle edge cases and error states
+
+## Dependencies
+- Use `npm install --legacy-peer-deps` for new packages
+- Test on both platforms after adding native modules
+- Run `cd ios && pod install` after iOS native module changes
+- Run `npm run bundle:hologram` after Android hologram changes
+
+## Commits
+Use conventional commits:
+- `feat:` - New features
+- `fix:` - Bug fixes
+- `docs:` - Documentation
+- `style:` - Code style (formatting)
+- `refactor:` - Code refactoring
+- `test:` - Adding tests
+- `chore:` - Build/tools/dependencies
+
+## Don't
+- Don't use default exports
+- Don't bypass TypeScript with `any`
+- Don't write inline styles (use StyleSheet)
+- Don't ignore platform differences
+- Don't commit console.logs in production code
+- Don't mix business logic with UI components
+- Don't store sensitive data in code
+- Don't ignore Firebase security rules
+
+## When Making Changes
+1. Check existing patterns in codebase
+2. Consider both iOS and Android
+3. Update types if changing interfaces
+4. Test the full user flow
+5. Check for console warnings
+6. Verify Firebase operations work
+7. Update documentation if needed
+
+## Resources
+- README.md - Setup and overview
+- CONTRIBUTING.md - Development guidelines
+- ARCHITECTURE_DIAGRAM.md - System architecture
+- PROJECT_STATUS.md - Current project state
