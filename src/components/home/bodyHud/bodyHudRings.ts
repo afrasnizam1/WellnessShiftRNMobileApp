@@ -3,7 +3,6 @@
  * wellness score the score card uses, so both always show the same numbers.
  */
 import type { WellnessCategoryKey, WellnessCategoryScores } from '../../../types';
-import { WELLNESS_CATEGORIES } from '../../../theme';
 
 export type HudRing = {
   id: string;
@@ -23,10 +22,10 @@ export function hudRingsClosed(rings: HudRing[]): number {
 }
 
 /**
- * Every wellness category is shown. The overall score averages all of them, so
- * showing fewer would make the overall look wrong. The 3D sphere has one segment each.
+ * Home Wellness Index shows the first eight categories. The sphere shader has
+ * one segment for each of those, matching the score ring the home screen uses.
  */
-export const HUD_CATEGORY_COUNT = WELLNESS_CATEGORIES.length;
+export const HUD_CATEGORY_COUNT = 8;
 
 export type CategoryHudSource = {
   key: WellnessCategoryKey;

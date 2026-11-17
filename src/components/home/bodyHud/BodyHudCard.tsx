@@ -120,7 +120,9 @@ function BodyHudCard({
   }, [csqScreen]);
 
   const onStageLayout = (e: LayoutChangeEvent) => setStageW(Math.round(e.nativeEvent.layout.width));
-  const sphereH = stageW ? Math.round(Math.min(stageW * 0.72, 300)) : 240;
+  // Sphere sits in its own slot. Labels live in bands above and below it,
+  // so they never paint over the ring or the core.
+  const sphereH = stageW ? Math.round(Math.min(stageW * 0.9, 400)) : 300;
 
   const missing = hasScore ? rings.filter((r) => !r.hasData).map((r) => r.name) : [];
 
@@ -180,16 +182,21 @@ function BodyHudCard({
           <Text style={styles.stageLabel}>WELLNESS SPHERE · 3D</Text>
           <Text style={styles.stageLabelR}>tap a segment to focus</Text>
         </View>
-        <View style={styles.stageMeta} pointerEvents="none">
-          <Text style={styles.chipText} numberOfLines={1}>
-            FOCUS{' '}
-            <Text style={[styles.chipStrong, { color: focusRing.color }]}>
-              {focusRing.name.toUpperCase()} {focusRing.hasData ? focusRing.valueLabel : '—'}
+
+        <View style={styles.chipRow} pointerEvents="none">
+          <View style={styles.chip}>
+            <Text style={styles.chipText}>
+              FOCUS{' '}
+              <Text style={[styles.chipStrong, { color: focusRing.color }]}>
+                {focusRing.name.toUpperCase()} {focusRing.hasData ? focusRing.valueLabel : '—'}
+              </Text>
             </Text>
-          </Text>
-          <Text style={styles.chipText} numberOfLines={1}>
-            <Text style={styles.chipStrongW}>DRAG</Text> to rotate
-          </Text>
+          </View>
+          <View style={styles.chip}>
+            <Text style={styles.chipText}>
+              <Text style={styles.chipStrongW}>DRAG</Text> to rotate
+            </Text>
+          </View>
         </View>
 
         <View style={[styles.sphereSlot, { height: sphereH }]}>
@@ -203,13 +210,17 @@ function BodyHudCard({
           />
         </View>
 
-        <View style={styles.stageMeta} pointerEvents="none">
-          <Text style={styles.chipText} numberOfLines={1}>
-            STREAK <Text style={styles.chipStrongW}>{streakDays} {streakDays === 1 ? 'day' : 'days'}</Text>
-          </Text>
-          <Text style={styles.chipText} numberOfLines={1}>
-            AT 10 <Text style={styles.chipStrongW}>{closed} / {rings.length}</Text>
-          </Text>
+        <View style={styles.chipRow} pointerEvents="none">
+          <View style={styles.chip}>
+            <Text style={styles.chipText}>
+              STREAK <Text style={styles.chipStrongW}>{streakDays} {streakDays === 1 ? 'day' : 'days'}</Text>
+            </Text>
+          </View>
+          <View style={styles.chip}>
+            <Text style={styles.chipText}>
+              AT 10 <Text style={styles.chipStrongW}>{closed} / {rings.length}</Text>
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -359,26 +370,38 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: HUD.line,
     overflow: 'hidden',
+    paddingHorizontal: 10,
+    paddingTop: 10,
+    paddingBottom: 10,
   },
   stageHead: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 2,
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
   },
-  stageMeta: {
+  stageLabel: { color: HUD.muted, fontSize: 9.5, letterSpacing: 1.2, fontFamily: MONO, flexShrink: 1 },
+  stageLabelR: { color: HUD.dim, fontSize: 9.5, fontFamily: MONO, flexShrink: 1, textAlign: 'right' },
+  chipRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
   },
-  sphereSlot: { marginHorizontal: 8 },
-  stageLabel: { color: HUD.muted, fontSize: 9.5, letterSpacing: 1.2, fontFamily: MONO },
-  stageLabelR: { color: HUD.dim, fontSize: 9.5, fontFamily: MONO },
-  chipText: { color: HUD.muted, fontSize: 9.5, letterSpacing: 0.6, fontFamily: MONO, flexShrink: 1 },
+  sphereSlot: {
+    marginVertical: 8,
+  },
+  chip: {
+    backgroundColor: HUD.chip,
+    borderWidth: 1,
+    borderColor: HUD.line2,
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    flexShrink: 1,
+  },
+  chipText: { color: HUD.muted, fontSize: 9.5, letterSpacing: 0.6, fontFamily: MONO },
   chipStrong: { fontWeight: '700' },
   chipStrongW: { color: HUD.text, fontWeight: '700' },
 

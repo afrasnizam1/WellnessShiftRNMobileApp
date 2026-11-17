@@ -43,36 +43,35 @@ const post = (msg: Record<string, unknown>) => {
 /* ---------- Shaders (verbatim from the website) ---------- */
 const ORB_VS = [
   'attribute float aSector; attribute float aLat; attribute float aPhase;',
-  'uniform float uPct[10]; uniform vec3 uCol[10]; uniform float uSel; uniform float uTime; uniform float uFill; uniform float uPR;',
+  'uniform float uPct[8]; uniform vec3 uCol[8]; uniform float uSel; uniform float uTime; uniform float uFill; uniform float uPR;',
   'varying vec3 vC; varying float vA;',
   'void main(){',
   ' float pct = 0.0; vec3 col = vec3(1.0);',
-  ' for (int i = 0; i < 10; i++) { if (abs(float(i) - aSector) < 0.5) { pct = uPct[i]; col = uCol[i]; } }',
+  ' for (int i = 0; i < 8; i++) { if (abs(float(i) - aSector) < 0.5) { pct = uPct[i]; col = uCol[i]; } }',
   ' pct *= uFill;',
   ' float isSel = 1.0 - step(0.5, abs(aSector - uSel));',
   ' float filled = step(aLat, pct);',
   ' float edge = (1.0 - smoothstep(0.0, 0.02, abs(aLat - pct))) * step(0.02, pct);',
   ' vec3 p = position;',
   ' float wave = sin(uTime * 1.6 + aPhase * 6.283 + p.y * 7.0) * 0.014 + sin(uTime * 0.9 + p.x * 5.0 + p.z * 3.0) * 0.01;',
-  ' p *= 1.0 + wave * filled + isSel * 0.16 * filled + edge * 0.035 + isSel * 0.04;',
+  ' p *= 1.0 + wave * filled + isSel * 0.04 * filled + edge * 0.02;',
   ' vec4 mv = modelViewMatrix * vec4(p, 1.0);',
   ' gl_Position = projectionMatrix * mv;',
-  ' float sz = mix(1.3, 2.45 + isSel * 0.75, filled) * (1.0 + edge * 1.7);',
+  ' float sz = mix(0.85, 1.2 + isSel * 0.28, filled) * (1.0 + edge * 0.4);',
   ' gl_PointSize = uPR * sz * (4.6 / -mv.z);',
-  ' vec3 vivid = clamp(col * 1.35, 0.0, 1.0);',
-  ' vec3 base = mix(vec3(0.08, 0.10, 0.14), vivid * (1.05 + 0.28 * isSel), filled);',
-  ' base = mix(base, vec3(1.0), edge * 0.92);',
-  ' base *= mix(1.0, 0.92, (1.0 - isSel) * filled);',
+  ' vec3 lit = clamp(col * mix(1.0, 1.12, isSel), 0.0, 1.0);',
+  ' vec3 base = mix(vec3(0.05, 0.06, 0.09), lit, filled);',
+  ' base = mix(base, vec3(1.0), edge * 0.28);',
   ' vC = base;',
   ' vec3 nv = normalize(normalMatrix * position);',
-  ' float facing = 0.55 + 0.45 * smoothstep(-0.2, 0.65, nv.z);',
-  ' vA = mix(0.38, 1.0, filled) * (0.9 + 0.1 * sin(uTime * 3.0 + aPhase * 40.0)) * facing;',
+  ' float facing = 0.48 + 0.52 * smoothstep(-0.2, 0.6, nv.z);',
+  ' vA = mix(0.4, 0.88, filled) * (0.94 + 0.06 * sin(uTime * 3.0 + aPhase * 40.0)) * facing;',
   '}',
 ].join('\n');
 const ORB_FS = [
   'varying vec3 vC; varying float vA;',
   'void main(){ vec2 c = gl_PointCoord - 0.5; float d = length(c); if (d > 0.5) discard;',
-  ' float core = 1.0 - smoothstep(0.0, 0.5, d); gl_FragColor = vec4(vC * (0.7 + core * 0.6), vA * core); }',
+  ' float core = 1.0 - smoothstep(0.0, 0.5, d); gl_FragColor = vec4(vC * (0.82 + core * 0.4), vA * core); }',
 ].join('\n');
 const CORE_VS = [
   'varying vec3 vN; varying vec3 vV;',
@@ -83,34 +82,42 @@ const CORE_FS = [
   'varying vec3 vN; varying vec3 vV;',
   'void main(){ float f = pow(1.0 - clamp(dot(normalize(vN), normalize(vV)), 0.0, 1.0), uPow);',
   ' float pulse = 0.85 + 0.15 * sin(uTime * 2.2);',
-  ' gl_FragColor = vec4(mix(uCol, vec3(1.0), f * 0.35) * uGain * pulse, f * pulse); }',
+  ' gl_FragColor = vec4(mix(uCol, vec3(1.0), f * 0.18) * uGain * pulse, f * pulse * 0.95); }',
 ].join('\n');
 const ARC_VS = [
   'attribute float aT; attribute float aOff; attribute vec3 aCol; uniform float uTime; varying float vA; varying vec3 vC;',
   'void main(){ vC = aCol; float h = fract(uTime * 0.22 + aOff);',
-  ' float d = aT - h; float head = smoothstep(-0.16, 0.0, d) * (1.0 - smoothstep(0.0, 0.015, d));',
-  ' vA = 0.07 + head * 0.95; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  ' float d = aT - h; float head = smoothstep(-0.18, 0.0, d) * (1.0 - smoothstep(0.0, 0.016, d));',
+  ' vA = 0.035 + head * 0.96; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
 ].join('\n');
-const ARC_FS = 'varying float vA; varying vec3 vC; void main(){ gl_FragColor = vec4(vC * 1.3, vA); }';
+const ARC_FS = 'varying float vA; varying vec3 vC; void main(){ gl_FragColor = vec4(vC * 1.35, vA); }';
 const NEU_LVS = [
-  'attribute float aT; attribute float aOff; attribute float aSpd; uniform float uTime; varying float vT; varying float vOff; varying float vSpd;',
-  'void main(){ vT = aT; vOff = aOff; vSpd = aSpd; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  'attribute float aT; attribute float aOff; attribute float aSpd; attribute vec3 aCol; uniform float uTime;',
+  'varying float vT; varying float vOff; varying float vSpd; varying vec3 vC;',
+  'void main(){ vT = aT; vOff = aOff; vSpd = aSpd; vC = aCol; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
 ].join('\n');
 const NEU_LFS = [
-  'uniform vec3 uCol; uniform float uTime; varying float vT; varying float vOff; varying float vSpd;',
-  'void main(){ float cyc = uTime * vSpd + vOff; float head = fract(cyc); float on = step(0.45, fract(cyc * 0.37 + vOff * 3.1));',
-  ' float d = vT - head; float spark = (1.0 - smoothstep(0.0, 0.05, abs(d))) + smoothstep(-0.3, 0.0, d) * (1.0 - step(0.0, d)) * 0.5;',
-  ' gl_FragColor = vec4(mix(uCol, vec3(1.0), 0.6 * spark) * 1.3, 0.18 + spark * on * 1.0); }',
+  'uniform float uTime; varying float vT; varying float vOff; varying float vSpd; varying vec3 vC;',
+  'void main(){ float cyc = uTime * vSpd + vOff; float head = fract(cyc);',
+  ' float on = step(0.18, fract(cyc * 0.37 + vOff * 3.1));',
+  ' float d = vT - head;',
+  ' float spark = (1.0 - smoothstep(0.0, 0.04, abs(d))) + smoothstep(-0.2, 0.0, d) * (1.0 - step(0.0, d)) * 0.4;',
+  ' vec3 shot = mix(vC, vec3(1.0), 0.55 + 0.45 * spark);',
+  ' gl_FragColor = vec4(shot * (0.8 + spark * 0.55), 0.18 + spark * on * 0.9); }',
 ].join('\n');
 const NEU_PVS = [
-  'attribute float aPhase; attribute float aRate; uniform float uTime; uniform float uPR; varying float vF;',
-  'void main(){ float f = pow(0.5 + 0.5 * sin(uTime * aRate + aPhase), 14.0); vF = f;',
-  ' vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; gl_PointSize = uPR * (3.0 + f * 8.0) * (4.6 / -mv.z); }',
+  'attribute float aPhase; attribute float aRate; attribute vec3 aCol; uniform float uTime; uniform float uPR;',
+  'varying float vF; varying vec3 vC;',
+  'void main(){ float f = pow(0.5 + 0.5 * sin(uTime * aRate + aPhase), 16.0); vF = f; vC = aCol;',
+  ' vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv;',
+  ' gl_PointSize = uPR * (2.1 + f * 6.2) * (4.6 / -mv.z); }',
 ].join('\n');
 const NEU_PFS = [
-  'uniform vec3 uCol; varying float vF;',
-  'void main(){ vec2 c = gl_PointCoord - 0.5; float d = length(c); if (d > 0.5) discard; float core = 1.0 - smoothstep(0.0, 0.5, d);',
-  ' gl_FragColor = vec4(mix(uCol, vec3(1.0), 0.45 + vF * 0.55) * 1.3, core * (0.6 + vF * 0.4)); }',
+  'varying float vF; varying vec3 vC;',
+  'void main(){ vec2 c = gl_PointCoord - 0.5; float d = length(c); if (d > 0.5) discard;',
+  ' float core = 1.0 - smoothstep(0.0, 0.5, d);',
+  ' vec3 shot = mix(vC, vec3(1.0), 0.78 + vF * 0.22);',
+  ' gl_FragColor = vec4(shot * (1.2 + vF * 0.35), core * (0.72 + vF * 0.45)); }',
 ].join('\n');
 
 /** Same seeded RNG as the website so the globe looks identical. */
@@ -122,19 +129,18 @@ function rngOf(seed: number) {
   };
 }
 
-/** One segment per home wellness category (all ten), in WELLNESS_CATEGORIES order. */
-const SECTORS = 10;
-const DEFAULT_COLORS = [
-  '#389EFA',
-  '#2EDBBD',
-  '#946BFA',
-  '#FF8561',
-  '#2EDBBD',
-  '#389EFA',
-  '#946BFA',
-  '#2EDBBD',
-  '#FA5C94',
-  '#FF8561',
+/** One segment per home wellness category (the first eight), in WELLNESS_CATEGORIES order. */
+const SECTORS = 8;
+/** Fallback only. The app sends the daily-ring colours. */
+const SPHERE_COLORS = [
+  '#FF4D8D',
+  '#F0A04A',
+  '#A78BFA',
+  '#FF5C4A',
+  '#3DCCF5',
+  '#FFFFFF',
+  '#5B8CFF',
+  '#A78BFA',
 ];
 
 function clamp01(v: number) {
@@ -150,7 +156,7 @@ function sectorPcts(src?: number[]) {
 const init = window.__WS_SPHERE_INIT__ ?? {};
 const state: SphereState = {
   pcts: sectorPcts(init.pcts),
-  colors: init.colors?.length === SECTORS ? init.colors : DEFAULT_COLORS,
+  colors: init.colors?.length === SECTORS ? init.colors : SPHERE_COLORS,
   sel: init.sel ?? 0,
   paused: !!init.paused,
   active: init.active !== false,
@@ -166,16 +172,16 @@ function start() {
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 50);
-  camera.position.set(0, 0.35, 4.9);
+  camera.position.set(0, 0.12, 4.35);
   camera.lookAt(0, 0, 0);
   const time = { value: 0 };
   const root = new THREE.Group();
-  root.rotation.x = 0.22;
+  root.rotation.x = 0.08;
   scene.add(root);
   const spin = new THREE.Group();
   root.add(spin);
 
-  const cols = state.colors.map((c) => new THREE.Color(c));
+  const cols = state.colors.map((hex) => new THREE.Color(hex));
   const cur = state.pcts.slice();
 
   // Fibonacci globe split into one longitude segment per wellness category.
@@ -225,7 +231,7 @@ function start() {
   spin.add(new THREE.Points(g, pm));
 
   // Core: fresnel shell + inner glow, tinted by the focused ring.
-  const coreCol = cols[state.sel].clone();
+  const coreCol = cols[Math.max(0, state.sel)].clone();
   const coreMat = (pow: number, gain: number) =>
     new THREE.ShaderMaterial({
       uniforms: { uCol: { value: coreCol }, uTime: time, uPow: { value: pow }, uGain: { value: gain } },
@@ -236,8 +242,8 @@ function start() {
       blending: THREE.AdditiveBlending,
     });
   const coreGroup = new THREE.Group();
-  coreGroup.add(new THREE.Mesh(new THREE.SphereGeometry(0.46, 64, 48), coreMat(2.2, 1.2)));
-  coreGroup.add(new THREE.Mesh(new THREE.SphereGeometry(0.2, 48, 32), coreMat(0.6, 1.6)));
+  coreGroup.add(new THREE.Mesh(new THREE.SphereGeometry(0.5, 64, 48), coreMat(2.4, 1.15)));
+  coreGroup.add(new THREE.Mesh(new THREE.SphereGeometry(0.22, 48, 32), coreMat(0.7, 1.4)));
 
   // Neural sparks inside the core.
   const nrng = rngOf(4711);
@@ -253,15 +259,19 @@ function start() {
   const npos: number[] = [];
   const nph: number[] = [];
   const nrate: number[] = [];
+  const ncol: number[] = [];
   nodes.forEach((v) => {
+    const c = cols[Math.floor(nrng() * SECTORS)];
     npos.push(v.x, v.y, v.z);
     nph.push(nrng() * 6.283);
-    nrate.push(0.8 + nrng() * 2.4);
+    nrate.push(1.1 + nrng() * 2.8);
+    ncol.push(c.r, c.g, c.b);
   });
   const ng = new THREE.BufferGeometry();
   ng.setAttribute('position', new THREE.Float32BufferAttribute(npos, 3));
   ng.setAttribute('aPhase', new THREE.Float32BufferAttribute(nph, 1));
   ng.setAttribute('aRate', new THREE.Float32BufferAttribute(nrate, 1));
+  ng.setAttribute('aCol', new THREE.Float32BufferAttribute(ncol, 3));
   const neuNodeMat = new THREE.ShaderMaterial({
     uniforms: { uCol: { value: coreCol }, uTime: time, uPR: { value: pr } },
     vertexShader: NEU_PVS,
@@ -274,6 +284,7 @@ function start() {
   const lt: number[] = [];
   const loff: number[] = [];
   const lspd: number[] = [];
+  const lcol: number[] = [];
   const seen: Record<string, 1> = {};
   nodes.forEach((v, i) => {
     const near = nodes
@@ -290,11 +301,13 @@ function start() {
       const A = fwd ? v : w;
       const B = fwd ? w : v;
       const off = nrng();
-      const spd = 0.35 + nrng() * 0.9;
+      const spd = 0.85 + nrng() * 1.5;
+      const c = cols[Math.floor(nrng() * SECTORS)];
       lpos.push(A.x, A.y, A.z, B.x, B.y, B.z);
       lt.push(0, 1);
       loff.push(off, off);
       lspd.push(spd, spd);
+      lcol.push(c.r, c.g, c.b, c.r, c.g, c.b);
     });
   });
   const lg = new THREE.BufferGeometry();
@@ -302,6 +315,7 @@ function start() {
   lg.setAttribute('aT', new THREE.Float32BufferAttribute(lt, 1));
   lg.setAttribute('aOff', new THREE.Float32BufferAttribute(loff, 1));
   lg.setAttribute('aSpd', new THREE.Float32BufferAttribute(lspd, 1));
+  lg.setAttribute('aCol', new THREE.Float32BufferAttribute(lcol, 3));
   const neuLineMat = new THREE.ShaderMaterial({
     uniforms: { uCol: { value: coreCol }, uTime: time },
     vertexShader: NEU_LVS,
@@ -316,21 +330,21 @@ function start() {
   coreGroup.add(heart);
 
   const wireMat = new THREE.LineBasicMaterial({
-    color: coreCol,
+    color: 0xc5d2ff,
     transparent: true,
-    opacity: 0.4,
+    opacity: 0.78,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
   });
-  const ico = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(0.62, 1)), wireMat);
+  const ico = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(0.72, 1)), wireMat);
   const wireMat2 = new THREE.LineBasicMaterial({
-    color: 0x9fb3c8,
+    color: 0x9aafef,
     transparent: true,
-    opacity: 0.12,
+    opacity: 0.42,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
   });
-  const ico2 = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(0.82, 2)), wireMat2);
+  const ico2 = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(0.9, 2)), wireMat2);
   coreGroup.add(ico);
   coreGroup.add(ico2);
   root.add(coreGroup);
@@ -360,7 +374,7 @@ function start() {
     const cv = new THREE.QuadraticBezierCurve3(p1.multiplyScalar(1.01), mid, p2.multiplyScalar(1.01));
     const S = 64;
     const off = rng();
-    const c1 = cols[s1];
+    const c1 = cols[Math.floor(rng() * SECTORS)];
     for (let k = 0; k <= S; k++) {
       const q = cv.getPoint(k / S);
       apos.push(q.x, q.y, q.z);
@@ -389,10 +403,10 @@ function start() {
 
   // Dust halo.
   const dpos: number[] = [];
-  for (let d = 0; d < 700; d++) {
+  for (let d = 0; d < 900; d++) {
     const u = rng() * 2 - 1;
     const t2 = rng() * Math.PI * 2;
-    const rad = 1.45 + rng() * 0.9;
+    const rad = d < 420 ? 1.55 + rng() * 0.55 : 2.6 + rng() * 3.4;
     const rq = Math.sqrt(1 - u * u);
     dpos.push(Math.cos(t2) * rq * rad, u * rad, Math.sin(t2) * rq * rad);
   }
@@ -402,10 +416,10 @@ function start() {
     dg,
     new THREE.PointsMaterial({
       color: 0x8fa7c0,
-      size: 1.4 * pr,
+      size: 1.15 * pr,
       sizeAttenuation: false,
       transparent: true,
-      opacity: 0.35,
+      opacity: 0.5,
       depthWrite: false,
       blending: THREE.AdditiveBlending,
     }),
@@ -414,7 +428,7 @@ function start() {
 
   /* ---------- Touch: horizontal drag spins; vertical swipes stay with the app's scroll ---------- */
   let rotY = 0;
-  const rotX = 0.22;
+  const rotX = 0.08;
   let velY = 0;
   // After a tap (or a category pick from the app), ease that wedge to the front and hold it there.
   let aim: number | null = null;
@@ -514,7 +528,7 @@ function start() {
     pm.uniforms.uFill.value = fill;
     time.value = t;
     pm.uniforms.uSel.value = state.sel;
-    coreCol.lerp(cols[state.sel], 0.08);
+    coreCol.lerp(cols[Math.max(0, state.sel)], 0.08);
     if (!drag) {
       if (aim !== null) {
         const delta = aim - rotY;

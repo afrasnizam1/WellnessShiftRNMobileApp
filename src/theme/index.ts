@@ -23,14 +23,14 @@ export const Colors = {
   primaryBg: '#F3EEFF',
 
   // Wellness category colours (orbit rings — native WellnessOrbitRingView)
-  physical: '#389EFA',
-  nutrition: '#2EDBBD',
-  mental: '#946BFA',
-  social: '#FF8561',
-  environment: '#2EDBBD',
-  fitness: '#389EFA',
-  sleep: '#946BFA',
-  mindfulness: '#2EDBBD',
+  physical: '#FF4D8D',
+  nutrition: '#F0A04A',
+  mental: '#A78BFA',
+  social: '#FF5C4A',
+  environment: '#3DCCF5',
+  fitness: '#FFFFFF',
+  sleep: '#5B8CFF',
+  mindfulness: '#A78BFA',
   stress: '#FA5C94',
   workLife: '#FF8561',
 

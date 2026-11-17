@@ -16,9 +16,11 @@ const cats = WELLNESS_CATEGORIES.map((c) => ({
 
 describe('Wellness Index rings', () => {
   it('shows every category the overall score averages', () => {
-    expect(HUD_CATEGORY_COUNT).toBe(WELLNESS_CATEGORIES.length);
-    const rings = buildCategoryHudRings(cats, {});
-    expect(rings.map((r) => r.categoryKey)).toEqual(WELLNESS_CATEGORIES.map((c) => c.key));
+    expect(HUD_CATEGORY_COUNT).toBe(8);
+    const rings = buildCategoryHudRings(cats.slice(0, HUD_CATEGORY_COUNT), {});
+    expect(rings.map((r) => r.categoryKey)).toEqual(
+      WELLNESS_CATEGORIES.slice(0, HUD_CATEGORY_COUNT).map((c) => c.key),
+    );
   });
 
   it('fills rings from the same category scores as the home score', () => {
