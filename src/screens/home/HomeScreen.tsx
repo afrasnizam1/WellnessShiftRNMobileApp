@@ -3,7 +3,7 @@ import { Screen } from '../../navigation/screenNames';
 import { navigationRef } from '../../navigation/navigationRef';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  RefreshControl, Platform, useWindowDimensions,
+  RefreshControl, Platform,
 } from 'react-native';
 import AppScreen from '../../components/common/AppScreen';
 import { AppCard, SectionHeader, QuickActionCard, AnimatedPressable, ListRow, IconBadge } from '../../components/ui';
@@ -11,13 +11,11 @@ import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
-import { Colors, Typography, Spacing, Radius, WELLNESS_CATEGORIES, tabBarScrollPadding } from '../../theme';
+import { Colors, Typography, Spacing, Radius, tabBarScrollPadding } from '../../theme';
 import { useAppStore } from '../../store';
 import type { WellnessCategoryKey } from '../../types';
-import WellnessOrbitRing, { getOrbitPanelSize } from '../../components/home/WellnessOrbitRing';
-import CategoryScoreRow from '../../components/home/CategoryScoreRow';
+import ScoreProgressCard from '../../components/home/ScoreProgressCard';
 import { useWellnessScoreChangeFeedback } from '../../hooks/useWellnessScoreChangeFeedback';
-import { trackChartCategoryTap } from '../../components/analytics';
 import ActivityBar from '../../components/home/ActivityBar';
 import TrialCountdownBanner from '../../components/home/TrialCountdownBanner';
 import MarketingHero from '../../components/home/MarketingHero';
@@ -49,7 +47,6 @@ import HomeCycleCard from '../../components/home/HomeCycleCard';
 import ClinicianRecommendationsCard from '../../components/home/ClinicianRecommendationsCard';
 import { healthKitService } from '../../services/healthkit';
 import BodyHudCard from '../../components/home/bodyHud/BodyHudCard';
-import { HUD_CATEGORY_COUNT } from '../../components/home/bodyHud/bodyHudRings';
 import { applyLifestyleMetricsToWellnessScore } from '../../services/lifestyleScoreService';
 import { clinicianService } from '../../services/clinicianService';
 import { gamificationService } from '../../services/gamificationService';
@@ -69,8 +66,6 @@ import { format } from 'date-fns';
 
 const HEALTH_SYNC_MIN_MS = 60_000;
 const CSQ_SCREEN = 'Home - Dashboard';
-const WELLNESS_RING = { screen: CSQ_SCREEN, chart: 'Wellness Ring' } as const;
-const CATEGORY_LIST_ANALYTICS = { screen: CSQ_SCREEN, chart: 'Category List' } as const;
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
@@ -155,32 +150,15 @@ export default function HomeScreen() {
   const healthSyncInFlight = useRef(false);
   const lastHomeInitUid = useRef<string | null>(null);
   const funnelComplete = !!user?.onboardingComplete;
-  const { width: windowWidth } = useWindowDimensions();
-  const baseRingSize = 162;
-  const basePanelSide = getOrbitPanelSize(baseRingSize);
-  const categoryListWidth = 148;
-  const ringRowNaturalWidth = basePanelSide + Spacing.sm + categoryListWidth;
-  const ringRowScale = Math.min(1, (windowWidth - 68) / ringRowNaturalWidth);
-  const ringLayoutSize = Math.round(baseRingSize * ringRowScale);
 
   const toggleCategory = useCallback((key: WellnessCategoryKey) => {
     setSelectedCategory((prev) => (prev === key ? null : key));
   }, []);
-  const clearCategory = useCallback(() => setSelectedCategory(null), []);
 
   const openVirtualTwin = useCallback(() => {
     navigation.navigate(Screen.virtualTwin);
   }, [navigation]);
 
-  const selectCategoryFromList = useCallback((key: WellnessCategoryKey) => {
-    setSelectedCategory((prev) => {
-      const next = prev === key ? null : key;
-      if (next) {
-        trackChartCategoryTap(CATEGORY_LIST_ANALYTICS, next);
-      }
-      return next;
-    });
-  }, []);
 
   const syncHealthKit = useCallback(
     async (opts?: { force?: boolean; applyLifestyle?: boolean }) => {
@@ -625,63 +603,15 @@ export default function HomeScreen() {
           />
         </View>
 
-        <AppCard style={styles.scoreCard} padded={false}>
-          <View style={styles.scoreCardInner}>
-          <View style={styles.scoreRingScaler}>
-            <View style={styles.scoreRow}>
-            <WellnessOrbitRing
-              score={wellnessScore?.overall ?? 0}
-              categories={wellnessScore?.categories}
-              size={ringLayoutSize}
-              spin={screenFocused}
-              selectedCategory={selectedCategory}
-              onCategorySelect={toggleCategory}
-              onCenterPress={clearCategory}
-              analytics={WELLNESS_RING}
-              scoreFeedback={scoreFeedback}
-            />
-            <View style={styles.categoryList}>
-              {WELLNESS_CATEGORIES.slice(0, HUD_CATEGORY_COUNT).map((cat) => {
-                const isSelected = selectedCategory === cat.key;
-                const catScore = wellnessScore?.categories?.[cat.key as WellnessCategoryKey] ?? 0;
-                return (
-                  <CategoryScoreRow
-                    key={cat.key}
-                    cat={cat}
-                    score={catScore}
-                    isSelected={isSelected}
-                    feedback={scoreFeedback}
-                    analytics={CATEGORY_LIST_ANALYTICS}
-                    onPress={selectCategoryFromList}
-                  />
-                );
-              })}
-            </View>
-          </View>
-          </View>
-
-          {wellnessScore && (
-            <AnimatedPressable
-              style={styles.analyticsLink}
-              onPress={() => navigation.navigate(Screen.tabAnalytics)}
-            >
-              <Text style={styles.analyticsLinkText}>View full analytics</Text>
-              <Ionicons name="chevron-forward" size={14} color={Colors.primary} />
-            </AnimatedPressable>
-          )}
-
-          {!wellnessScore && (
-            <AnimatedPressable
-              style={styles.quizCTA}
-              onPress={openWellnessQuiz}
-            >
-              <Ionicons name="clipboard-outline" size={18} color={Colors.primary} />
-              <Text style={styles.quizCTAText}>Take wellness assessment to get your score</Text>
-              <Ionicons name="arrow-forward" size={16} color={Colors.primary} />
-            </AnimatedPressable>
-          )}
-          </View>
-        </AppCard>
+        {/* Wellness Index above shows today's score; this card shows what's changed. */}
+        <ScoreProgressCard
+          uid={user?.uid}
+          wellnessScore={wellnessScore}
+          refreshKey={hudRefreshKey}
+          onOpenAnalytics={() => navigation.navigate(Screen.tabAnalytics)}
+          onTakeAssessment={openWellnessQuiz}
+          csqScreen={CSQ_SCREEN}
+        />
 
         {showRefinePrompt ? (
           <RefineWellnessCard
@@ -970,44 +900,6 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderLight,
   },
   dateText: { fontSize: Typography.size.xs, color: Colors.textSecondary, fontWeight: '600' },
-  scoreCard: { overflow: 'visible' },
-  scoreCardInner: {
-    paddingTop: Spacing.xs,
-    paddingBottom: Spacing.sm,
-    paddingRight: Spacing.lg,
-    paddingLeft: Spacing.sm,
-    overflow: 'visible',
-  },
-  scoreRingScaler: {
-    overflow: 'visible',
-    alignSelf: 'flex-start',
-    width: '100%',
-  },
-  scoreRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  categoryList: { flex: 1, gap: 2, minWidth: 0 },
-  analyticsLink: {
-    marginTop: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingVertical: Spacing.xs,
-  },
-  analyticsLinkText: { fontSize: Typography.size.sm, color: Colors.primary, fontWeight: '600' },
-  quizCTA: {
-    marginTop: Spacing.md,
-    backgroundColor: Colors.primaryLight,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  quizCTAText: { flex: 1, fontSize: Typography.size.sm, color: Colors.primary, fontWeight: '600' },
   planEmptyCTA: {
     flexDirection: 'row',
     alignItems: 'center',

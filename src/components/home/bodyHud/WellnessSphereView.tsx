@@ -16,16 +16,18 @@ type Props = {
   /** False when Home is off screen — the render loop stops. */
   active: boolean;
   onPick?: (index: number) => void;
+  /** Centre glow colour (overall score band). */
+  coreColor?: string;
 };
 
-function WellnessSphereView({ pcts, colors, selected, paused, active, onPick }: Props) {
+function WellnessSphereView({ pcts, colors, selected, paused, active, onPick, coreColor }: Props) {
   const ref = useRef<WebView>(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
 
   // Initial state goes in before the page script runs, so the first frame is already right.
   // Later changes are pushed through wsSphere.update(); the HTML itself never changes.
-  const initRef = useRef({ pcts, colors, sel: selected, paused, active });
+  const initRef = useRef({ pcts, colors, sel: selected, paused, active, core: coreColor });
   const injectedBefore = useMemo(
     () => `window.__WS_SPHERE_INIT__=${JSON.stringify(initRef.current)};true;`,
     [],
@@ -34,9 +36,9 @@ function WellnessSphereView({ pcts, colors, selected, paused, active, onPick }: 
 
   useEffect(() => {
     if (!ready) return;
-    const patch = JSON.stringify({ pcts, colors, sel: selected, paused, active });
+    const patch = JSON.stringify({ pcts, colors, sel: selected, paused, active, core: coreColor });
     ref.current?.injectJavaScript(`window.wsSphere&&window.wsSphere.update(${patch});true;`);
-  }, [ready, pcts, colors, selected, paused, active]);
+  }, [ready, pcts, colors, selected, paused, active, coreColor]);
 
   const onMessage = useCallback(
     (e: WebViewMessageEvent) => {
