@@ -54,7 +54,7 @@ export default function SocialChallengesScreen() {
   const joinChallenge = async (challengeId: string) => {
     if (!user) return;
     try {
-      await socialService.joinChallenge(challengeId, user.uid, user.displayName);
+      await socialService.joinChallenge(user.uid, user.displayName || 'Member', challengeId, 1);
       loadChallenges();
     } catch (e) {
       console.warn('Failed to join challenge:', e);
@@ -64,7 +64,7 @@ export default function SocialChallengesScreen() {
   const leaveChallenge = async (challengeId: string) => {
     if (!user) return;
     try {
-      await socialService.leaveChallenge(challengeId, user.uid);
+      await socialService.leaveChallenge(user.uid, challengeId);
       loadChallenges();
     } catch (e) {
       console.warn('Failed to leave challenge:', e);
@@ -93,7 +93,8 @@ export default function SocialChallengesScreen() {
     return userParticipant?.progress || 0;
   };
 
-  const getDaysRemaining = (endDate: string) => {
+  const getDaysRemaining = (endDate?: string) => {
+    if (!endDate) return 0;
     const end = new Date(endDate);
     const now = new Date();
     const diff = end.getTime() - now.getTime();
@@ -161,7 +162,7 @@ export default function SocialChallengesScreen() {
                   <View 
                     style={[
                       styles.progressFill, 
-                      { width: `${Math.min(100, (getChallengeProgress(selectedChallenge) / selectedChallenge.targetValue) * 100)}%` }
+                      { width: `${Math.min(100, (getChallengeProgress(selectedChallenge) / (selectedChallenge.targetValue ?? 1)) * 100)}%` }
                     ]} 
                   />
                 </View>

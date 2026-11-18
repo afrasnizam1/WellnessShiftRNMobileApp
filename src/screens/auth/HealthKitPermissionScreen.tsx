@@ -230,11 +230,14 @@ export default function HealthKitPermissionScreen() {
     try {
       const available = await healthKitService.isAvailable();
       if (!available) {
+        const unavailableDetail = healthKitService.getLastConnectError();
         Alert.alert(
           `${platformName} unavailable`,
-          Platform.OS === 'ios'
-            ? 'Apple Health is not available on this device. On a simulator, open the Health app once, then try again.'
-            : 'Install or update Health Connect from the Play Store, then try again.',
+          unavailableDetail
+            ? unavailableDetail
+            : Platform.OS === 'ios'
+              ? 'Apple Health is not available on this device. On a simulator, open the Health app once, then try again.'
+              : 'Install or update Health Connect from the Play Store, then try again.',
           Platform.OS === 'android'
             ? [
                 { text: 'Not now', style: 'cancel' },

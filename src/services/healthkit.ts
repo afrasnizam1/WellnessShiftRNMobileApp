@@ -1,19 +1,53 @@
 // src/services/healthkit.ts
 // Unified health data access — Apple HealthKit (iOS) + Health Connect (Android)
 
-import { Platform } from 'react-native';
-import AppleHealthKit, {
-  HealthInputOptions,
-  HealthKitPermissions,
-} from 'react-native-health';
+import { NativeModules, Platform } from 'react-native';
+import AppleHealthKit from 'react-native-health';
+import type { HealthInputOptions, HealthKitPermissions, HealthValue } from 'react-native-health';
 import type { ActivitySnapshot, DailyActivityPoint } from '../types';
 import {
   buildEmptyHistory,
   dateKey,
   lastNDays,
 } from '../utils/activityHistoryHelpers';
+import { resolveAppleHealthKitBridge, type AppleHealthKitBridge } from './appleHealthKitBridge';
 import { healthConnectService } from './healthConnect';
 import { healthKitStorage } from './healthKitStorage';
+
+interface NativeAppleHealthKit extends AppleHealthKitBridge {
+  getStepCount: (
+    options: HealthInputOptions,
+    callback: (err: unknown, results: HealthValue) => void,
+  ) => void;
+  getActiveEnergyBurned: (
+    options: HealthInputOptions,
+    callback: (err: unknown, results: HealthValue[]) => void,
+  ) => void;
+  getDistanceWalkingRunning: (
+    options: HealthInputOptions,
+    callback: (err: unknown, results: HealthValue) => void,
+  ) => void;
+  getAppleExerciseTime: (
+    options: HealthInputOptions,
+    callback: (err: unknown, results: HealthValue | HealthValue[]) => void,
+  ) => void;
+  getHeartRateSamples: (
+    options: HealthInputOptions,
+    callback: (err: unknown, results: HealthValue[]) => void,
+  ) => void;
+  getSleepSamples: (
+    options: HealthInputOptions,
+    callback: (err: unknown, results: HealthValue[]) => void,
+  ) => void;
+  getDailyStepCountSamples: (
+    options: HealthInputOptions,
+    callback: (err: unknown, results: HealthValue[]) => void,
+  ) => void;
+  getDailyDistanceWalkingRunningSamples: (
+    options: HealthInputOptions,
+    callback: (err: unknown, results: HealthValue[]) => void,
+  ) => void;
+}
 
 const isIOS = Platform.OS === 'ios';
 const isAndroid = Platform.OS === 'android';
@@ -22,32 +56,33 @@ export function getHealthPlatformName(): string {
   return isAndroid ? 'Google Health Connect' : 'Apple Health';
 }
 
-function healthKitReady(): boolean {
-  return (
-    isIOS &&
-    typeof AppleHealthKit?.isAvailable === 'function' &&
-    typeof AppleHealthKit?.initHealthKit === 'function'
+function getNativeAppleHealthKit(): NativeAppleHealthKit | null {
+  if (!isIOS) return null;
+  return resolveAppleHealthKitBridge<NativeAppleHealthKit>(
+    (NativeModules as { AppleHealthKit?: unknown }).AppleHealthKit,
+    AppleHealthKit,
   );
 }
 
-function getPermissions(): HealthKitPermissions {
-  const { Permissions } = AppleHealthKit.Constants;
+function getPermissions(): HealthKitPermissions | null {
+  const permissions = AppleHealthKit.Constants?.Permissions;
+  if (!permissions) return null;
   return {
     permissions: {
       read: [
-        Permissions.Steps,
-        Permissions.DistanceWalkingRunning,
-        Permissions.ActiveEnergyBurned,
-        Permissions.AppleExerciseTime,
-        Permissions.HeartRate,
-        Permissions.SleepAnalysis,
-        Permissions.Weight,
-        Permissions.Height,
-        Permissions.BloodPressureDiastolic,
-        Permissions.BloodPressureSystolic,
-        Permissions.BloodGlucose,
-        Permissions.OxygenSaturation,
-        Permissions.RespiratoryRate,
+        permissions.Steps,
+        permissions.DistanceWalkingRunning,
+        permissions.ActiveEnergyBurned,
+        permissions.AppleExerciseTime,
+        permissions.HeartRate,
+        permissions.SleepAnalysis,
+        permissions.Weight,
+        permissions.Height,
+        permissions.BloodPressureDiastolic,
+        permissions.BloodPressureSystolic,
+        permissions.BloodGlucose,
+        permissions.OxygenSaturation,
+        permissions.RespiratoryRate,
       ],
       write: [],
     },
@@ -76,12 +111,14 @@ function healthKitErrorMessage(err: unknown): string {
 
 async function requestPermissionsIOS(): Promise<boolean> {
   lastConnectError = null;
-  if (!healthKitReady()) {
+  const native = getNativeAppleHealthKit();
+  const permissions = getPermissions();
+  if (!native || !permissions) {
     lastConnectError = 'Apple Health is not available in this build.';
     return false;
   }
   return new Promise((resolve) => {
-    AppleHealthKit.initHealthKit(getPermissions(), (err) => {
+    native.initHealthKit(permissions, (err) => {
       if (err) {
         healthKitInitialized = false;
         lastConnectError = healthKitErrorMessage(err);
@@ -92,25 +129,36 @@ async function requestPermissionsIOS(): Promise<boolean> {
       // HealthKit never reports read access as SharingAuthorized. A finished
       // requestAuthorization is the success signal; denied reads just look empty.
       healthKitInitialized = true;
-      healthKitStorage.setEnabled(true).catch(() => {});
-      resolve(true);
+      healthKitStorage
+        .setEnabled(true)
+        .catch(() => {})
+        .finally(() => resolve(true));
     });
   });
 }
 
 /** Re-init HealthKit on app launch when user previously connected (no dialog if already authorized). */
 async function ensureInitializedIOS(): Promise<boolean> {
-  if (!healthKitReady()) return false;
+  if (!getNativeAppleHealthKit()) return false;
   if (healthKitInitialized) return true;
   if (!(await healthKitStorage.isEnabled())) return false;
   return requestPermissionsIOS();
 }
 
 async function isAvailableIOS(): Promise<boolean> {
-  if (!healthKitReady()) return false;
+  const native = getNativeAppleHealthKit();
+  if (!native) {
+    lastConnectError = 'Apple Health is not available in this build.';
+    return false;
+  }
   return new Promise((resolve) => {
-    AppleHealthKit.isAvailable((err, available) => {
-      resolve(!err && !!available);
+    native.isAvailable((err, available) => {
+      if (err) {
+        lastConnectError = healthKitErrorMessage(err);
+        resolve(false);
+        return;
+      }
+      resolve(!!available);
     });
   });
 }
@@ -122,7 +170,8 @@ async function isConnectedIOS(): Promise<boolean> {
 }
 
 async function getTodayActivityIOS(): Promise<ActivitySnapshot> {
-  if (!(await ensureInitializedIOS())) return { ...EMPTY_ACTIVITY };
+  const native = getNativeAppleHealthKit();
+  if (!native || !(await ensureInitializedIOS())) return { ...EMPTY_ACTIVITY };
 
   return new Promise((resolve) => {
     const today = new Date();
@@ -137,23 +186,24 @@ async function getTodayActivityIOS(): Promise<ActivitySnapshot> {
       date: today.toISOString(),
     };
 
-    AppleHealthKit.getStepCount(options, (err, steps) => {
+    native.getStepCount(options, (err, steps) => {
       const stepsValue = err ? 0 : steps.value;
 
-      AppleHealthKit.getActiveEnergyBurned(
+      native.getActiveEnergyBurned(
         { startDate: today.toISOString() },
         (err2, calories) => {
           const calValue = err2
             ? 0
             : calories.reduce((sum, c) => sum + c.value, 0);
 
-          AppleHealthKit.getDistanceWalkingRunning(options, (err3, dist) => {
+          native.getDistanceWalkingRunning(options, (err3, dist) => {
             const distValue = err3 ? 0 : (dist.value ?? 0) / 1000;
 
-            AppleHealthKit.getAppleExerciseTime(options, (err4, exercise) => {
-              const exerciseValue = err4 ? 0 : (Array.isArray(exercise) ? exercise[0]?.value : (exercise as { value?: number }).value) ?? 0;
+            native.getAppleExerciseTime(options, (err4, exercise) => {
+              const exerciseSample = Array.isArray(exercise) ? exercise[0] : exercise;
+              const exerciseValue = err4 ? 0 : exerciseSample?.value ?? 0;
 
-              AppleHealthKit.getHeartRateSamples(
+              native.getHeartRateSamples(
                 {
                   startDate: today.toISOString(),
                   endDate: now.toISOString(),
@@ -164,7 +214,7 @@ async function getTodayActivityIOS(): Promise<ActivitySnapshot> {
                   const hrValue =
                     err5 || hr.length === 0 ? undefined : hr[0].value;
 
-                  AppleHealthKit.getSleepSamples(
+                  native.getSleepSamples(
                     {
                       startDate: sleepStart.toISOString(),
                       endDate: now.toISOString(),
@@ -245,7 +295,8 @@ function mergeDailySamples(
 }
 
 async function getActivityHistoryIOS(days: number): Promise<DailyActivityPoint[]> {
-  if (!(await ensureInitializedIOS())) return buildEmptyHistory(days);
+  const native = getNativeAppleHealthKit();
+  if (!native || !(await ensureInitializedIOS())) return buildEmptyHistory(days);
 
   const dayList = lastNDays(days);
   const start = new Date(dayList[0]);
@@ -254,10 +305,10 @@ async function getActivityHistoryIOS(days: number): Promise<DailyActivityPoint[]
   const range = { startDate: start.toISOString(), endDate: end.toISOString() };
 
   return new Promise((resolve) => {
-    AppleHealthKit.getDailyStepCountSamples(range, (errSteps, steps) => {
-      AppleHealthKit.getActiveEnergyBurned(range, (errCal, cals) => {
-        AppleHealthKit.getDailyDistanceWalkingRunningSamples(range, (errDist, dists) => {
-          AppleHealthKit.getSleepSamples(range, (errSleep, sleep) => {
+    native.getDailyStepCountSamples(range, (errSteps, steps) => {
+      native.getActiveEnergyBurned(range, (errCal, cals) => {
+        native.getDailyDistanceWalkingRunningSamples(range, (errDist, dists) => {
+          native.getSleepSamples(range, (errSleep, sleep) => {
             const calSamples = (cals ?? []).map((c) => ({
               startDate: c.startDate ?? c.endDate ?? '',
               value: c.value ?? 0,
@@ -302,6 +353,7 @@ export const healthKitService = {
   /** HealthKit / Health Connect exists on this device. */
   isAvailable: (): Promise<boolean> => {
     if (isAndroid) return healthConnectService.isAvailable();
+    lastConnectError = null;
     return isAvailableIOS();
   },
 

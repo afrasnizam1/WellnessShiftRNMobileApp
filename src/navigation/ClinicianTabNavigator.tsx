@@ -39,9 +39,9 @@ function TabIcon({ focused, icon, activeIcon, label }: { focused: boolean; icon:
 export function ClinicianTabNavigator() {
   return (
     <Tab.Navigator
+      sceneContainerStyle={styles.sceneWithTab}
       screenOptions={{
         headerShown: false,
-        sceneContainerStyle: styles.sceneWithTab,
         tabBarStyle: styles.tabBar,
         tabBarShowLabel: false,
       }}

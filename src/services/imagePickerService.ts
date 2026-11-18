@@ -15,13 +15,13 @@ export type PickedImage = {
 
 const LIBRARY_OPTS: ImageLibraryOptions = {
   mediaType: 'photo',
-  quality: 0.75,
+  quality: 0.8,
   selectionLimit: 1,
 };
 
 const CAMERA_OPTS: CameraOptions = {
   mediaType: 'photo',
-  quality: 0.75,
+  quality: 0.8,
   saveToPhotos: false,
   cameraType: 'back',
 };

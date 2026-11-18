@@ -11,7 +11,7 @@ const AnimatedPressableBase = Animated.createAnimatedComponent(Pressable);
 
 type Props = Omit<PressableProps, 'style'> & {
   children: React.ReactNode;
-  style?: StyleProp<ViewStyle>;
+  style?: StyleProp<ViewStyle> | object;
   scaleTo?: number;
 };
 

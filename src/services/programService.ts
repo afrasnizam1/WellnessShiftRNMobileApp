@@ -14,7 +14,7 @@ function activeRef(uid: string, programId: string) {
 }
 
 function mapActive(id: string, data: Record<string, unknown>): ActiveProgram {
-  return { ...(data as ActiveProgram), id };
+  return { ...(data as unknown as ActiveProgram), id };
 }
 
 export const programService = {

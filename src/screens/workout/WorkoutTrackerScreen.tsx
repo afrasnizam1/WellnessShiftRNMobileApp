@@ -26,7 +26,7 @@ export default function WorkoutTrackerScreen() {
   const [completedExercises, setCompletedExercises] = useState<string[]>([]);
   
   const progressAnim = useRef(new Animated.Value(0)).current;
-  const restTimerRef = useRef<NodeJS.Timeout>();
+  const restTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const currentExercise = workout.exercises[currentExerciseIndex];
   const exerciseDetails = EXERCISES.find(e => e.id === currentExercise.exerciseId);

@@ -80,16 +80,13 @@ export default function CreateChallengeScreen() {
 
     setLoading(true);
     try {
-      await socialService.createChallenge({
-        title: formData.title.trim(),
-        description: formData.description.trim(),
-        category: formData.category,
-        duration: formData.duration,
-        targetValue: formData.targetValue,
-        targetUnit: formData.targetUnit,
-        createdBy: user.uid,
-        isPrivate: formData.isPrivate,
-      });
+      await socialService.createChallenge(
+        user.uid,
+        formData.title.trim(),
+        formData.description.trim(),
+        formData.category,
+        formData.duration,
+      );
 
       Alert.alert(
         'Challenge Created!',

@@ -612,7 +612,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   sparkleWrap: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },

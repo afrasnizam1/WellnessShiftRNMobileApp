@@ -93,7 +93,7 @@ function productSku(product: ProductSubscription): string {
 }
 
 function productPriceLabel(product: ProductSubscription): string {
-  return product.displayPrice || product.localizedPrice || '';
+  return product.displayPrice || '';
 }
 
 function productPriceAmount(product: ProductSubscription): string {

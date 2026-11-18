@@ -115,7 +115,7 @@ export default function MindfulnessToolkit() {
     <AppScreen>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => (tool ? openTool('') || setToolId(null) : navigation.goBack())}
+          onPress={() => (tool ? openTool('') : navigation.goBack())}
           style={styles.backBtn}
           accessibilityRole="button"
           accessibilityLabel="Back"
