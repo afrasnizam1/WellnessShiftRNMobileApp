@@ -7,5 +7,9 @@
     },
     "strict": true,
     "skipLibCheck": true
-  }
+  },
+  "exclude": [
+    "functions",
+    "src/hologram/androidHologramViewer.ts"
+  ]
 }

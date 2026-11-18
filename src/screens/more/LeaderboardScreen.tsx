@@ -97,7 +97,7 @@ export default function LeaderboardScreen() {
     switch (position) {
       case 0: return Colors.warning;
       case 1: return Colors.textSecondary;
-      case 2: return Colors.warningDark;
+      case 2: return Colors.textTertiary;
       default: return Colors.borderLight;
     }
   };

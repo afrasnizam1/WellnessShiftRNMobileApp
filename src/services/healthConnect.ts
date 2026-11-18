@@ -7,7 +7,7 @@ import {
   readRecords,
   requestPermission,
 } from 'react-native-health-connect';
-import type { TimeRangeFilter } from 'react-native-health-connect';
+import type { TimeRangeFilter } from 'react-native-health-connect/lib/typescript/types/base.types';
 import type { ActivitySnapshot, DailyActivityPoint } from '../types';
 import {
   buildDemoActivityHistory,

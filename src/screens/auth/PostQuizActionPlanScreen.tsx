@@ -11,6 +11,7 @@ import { Colors, Typography, Spacing, Radius, WELLNESS_CATEGORIES } from '../../
 import { useAppStore } from '../../store';
 import { onboardingStorage } from '../../services/onboardingStorage';
 import type { WellnessCategoryKey } from '../../types';
+import AppScreen from '../../components/common/AppScreen';
 import { CategoryIcon } from '../../components/ui';
 import { goalToWellnessCategory } from '../../data/onboardingGoals';
 

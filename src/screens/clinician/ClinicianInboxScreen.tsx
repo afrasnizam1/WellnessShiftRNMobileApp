@@ -93,7 +93,7 @@ export default function ClinicianInboxScreen() {
       ) : (
         <FlatList
           data={rows}
-          keyExtractor={(item) => ('threadId' in item && item.threadId) ? item.threadId : item.uid}
+          keyExtractor={(item) => ('uid' in item ? item.uid : item.threadId)}
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <View style={styles.empty}>

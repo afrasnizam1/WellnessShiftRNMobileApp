@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StatusBar, StyleSheet, type StatusBarStyle, type ViewStyle } from 'react-native';
+import { View, StatusBar, StyleSheet, type StatusBarStyle, type StyleProp, type ViewStyle } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 import { Colors, Gradients } from '../../theme';
@@ -14,7 +14,7 @@ type Props = {
   statusBarStyle?: StatusBarStyle;
   backgroundColor?: string;
   mesh?: boolean;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 };
 
 /** Full-bleed screen shell with optional soft gradient mesh background. */

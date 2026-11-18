@@ -56,7 +56,6 @@ export default function ClinicianMessagesScreen() {
       setThread((current) => ({
         patientId: patient.uid,
         clinicianId: user.uid,
-        status: 'open',
         startedAt: current?.startedAt ?? new Date().toISOString(),
         startedBy: current?.startedBy ?? user.uid,
         patientUnread: 0,

@@ -176,7 +176,6 @@ export const userService = {
       // `patient` over a clinician account (Android auth/Firestore race).
       const resolvedRole = existing?.role ?? data.role ?? 'patient';
       const profile: UserProfile = {
-        uid,
         email: data.email ?? existing?.email ?? '',
         displayName: data.displayName ?? existing?.displayName ?? 'User',
         createdAt: existing?.createdAt ?? now,

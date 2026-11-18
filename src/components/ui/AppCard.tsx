@@ -1,11 +1,11 @@
 import React from 'react';
-import { View, StyleSheet, type ViewStyle } from 'react-native';
+import { View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { Colors, Radius, Spacing, Shadow } from '../../theme';
 import AnimatedPressable from './AnimatedPressable';
 
 type Props = {
   children: React.ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   padded?: boolean;
   elevated?: boolean;
   onPress?: () => void;

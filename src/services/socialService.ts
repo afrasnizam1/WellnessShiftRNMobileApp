@@ -221,6 +221,16 @@ export const socialService = {
     return { id: ref.id, ...payload };
   },
 
+  leaveChallenge: async (uid: string, challengeId: string): Promise<void> => {
+    if (!appConfig.isFirebaseConfigured) return;
+    await firestore()
+      .collection('challenges')
+      .doc(challengeId)
+      .collection('participants')
+      .doc(uid)
+      .delete();
+  },
+
   joinChallenge: async (uid: string, displayName: string, challengeId: string, goal: number): Promise<void> => {
     if (!appConfig.isFirebaseConfigured) return;
     const ref = firestore().collection('challenges').doc(challengeId).collection('participants').doc(uid);
